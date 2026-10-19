@@ -1,0 +1,35 @@
+# Dependencias
+node_modules/
+
+# Compilado
+dist/
+build/
+
+# Secretos / configuración local
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+
+# Base de datos local (SQLite con WAL)
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+
+# Artefactos generados en runtime
+tts_cache/
+qr_codes/
+tokens/
+
+# Sistema
+.DS_Store
+
+# LEM SDK: binarios nativos protegidos — nunca a GitHub
+lib/*.a
+lib/*.dylib
+lib/*.so
+lib/*.dll
+lib/lem_worker_bin

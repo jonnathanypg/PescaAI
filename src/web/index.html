@@ -1,0 +1,2840 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Pesca AI | Ecosistema Operativo Pesquero End-to-End</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #020617; color: #f8fafc; overflow-x: hidden; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .view-card { display: none; }
+    .view-card.active { display: flex; flex-direction: column; }
+
+    /* Efectos de resplandor del Orbe de Voz */
+    .orb-container {
+      position: relative;
+      width: 300px;
+      height: 300px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 9999px;
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+    }
+    .orb-container:hover {
+      transform: scale(1.02);
+    }
+    .orb-container.state-dormant,
+    .orb-container.state-listening {
+      box-shadow: 0 0 60px rgba(59, 130, 246, 0.28), inset 0 0 28px rgba(37, 99, 235, 0.22);
+    }
+    .orb-container.state-user_speaking {
+      box-shadow: 0 0 110px rgba(16, 185, 129, 0.78), inset 0 0 55px rgba(52, 211, 153, 0.45);
+      transform: scale(1.035);
+    }
+    .orb-container.state-thinking {
+      box-shadow: 0 0 95px rgba(245, 158, 11, 0.65), inset 0 0 45px rgba(217, 119, 6, 0.35);
+    }
+    .orb-container.state-speaking {
+      box-shadow: 0 0 110px rgba(139, 92, 246, 0.68), inset 0 0 50px rgba(6, 182, 212, 0.40);
+    }
+    .orb-container.state-rejected {
+      box-shadow: 0 0 105px rgba(239, 68, 68, 0.80), inset 0 0 50px rgba(239, 68, 68, 0.45);
+    }
+    .orb-container.state-idle {
+      box-shadow: 0 0 45px rgba(59, 130, 246, 0.18), inset 0 0 20px rgba(30, 64, 175, 0.18);
+    }
+
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.78);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(51, 65, 85, 0.65);
+    }
+
+    .quick-sim-btn {
+      transition: all 0.2s ease;
+    }
+    .quick-sim-btn:disabled {
+      opacity: 0.42;
+      cursor: not-allowed;
+      filter: grayscale(0.45);
+      transform: none !important;
+    }
+    .quick-sim-btn.active-sim-btn {
+      opacity: 1 !important;
+      filter: none !important;
+      border-color: #22d3ee !important;
+      box-shadow: 0 0 15px rgba(34, 211, 238, 0.35);
+    }
+
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #090d16; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #334155; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-cyan-500 selection:text-slate-950">
+
+  <!-- ==================== PANTALLA DE LOGIN ==================== -->
+  <div id="loginScreen" class="fixed inset-0 z-50 bg-slate-950 flex items-center justify-center p-4">
+    <div class="max-w-md w-full glass-panel rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+      <div class="absolute -top-24 -right-24 w-48 h-48 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div class="flex items-center space-x-3 mb-6">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-600/30 border border-cyan-400/40 flex items-center justify-center text-cyan-300 text-xl font-black shadow-lg">
+          🐟
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-base font-black tracking-wider text-white">Pesca AI</h1>
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-700/60 mono font-bold">Módulo 02 • Pesaje</span>
+          </div>
+          <p class="text-xs text-slate-400">Infraestructura Operativa Pesquera End-to-End</p>
+        </div>
+      </div>
+
+      <div class="mb-5">
+        <h2 class="text-lg font-bold text-slate-100">Ingreso a Terminal Operativa</h2>
+        <p class="text-xs text-slate-400">Módulo de Captura de Pesaje por Voz Manos Libres y Rendimiento en Línea</p>
+      </div>
+
+      <form id="loginForm" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Usuario</label>
+          <input id="loginUsername" type="text" required placeholder="supervisor / directivo / admin" 
+            class="w-full bg-slate-950/90 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-cyan-500 mono transition">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Contraseña</label>
+          <input id="loginPassword" type="password" required placeholder="••••••" 
+            class="w-full bg-slate-950/90 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-cyan-500 mono transition">
+        </div>
+
+        <div id="loginError" class="text-xs text-red-400 bg-red-950/50 border border-red-800 p-2.5 rounded-xl hidden"></div>
+
+        <button type="submit" class="w-full py-3 bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-cyan-950/50 transition duration-150">
+          Ingresar al Módulo
+        </button>
+      </form>
+
+      <div class="mt-6 pt-4 border-t border-slate-800/80">
+        <span class="text-[10px] uppercase font-bold text-slate-500 block mb-2">Acceso rápido por perfil (clave: 123):</span>
+        <div class="grid grid-cols-3 gap-2 text-[11px]">
+          <button onclick="fillLogin('supervisor','123')" class="bg-slate-800/80 hover:bg-slate-700 py-1.5 px-2 rounded-lg text-cyan-300 font-semibold border border-slate-700/60">Supervisor</button>
+          <button onclick="fillLogin('directivo','123')" class="bg-slate-800/80 hover:bg-slate-700 py-1.5 px-2 rounded-lg text-purple-300 font-semibold border border-slate-700/60">Gerencia</button>
+          <button onclick="fillLogin('admin','123')" class="bg-slate-800/80 hover:bg-slate-700 py-1.5 px-2 rounded-lg text-emerald-300 font-semibold border border-slate-700/60">Administrador</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== APLICACIÓN PRINCIPAL ==================== -->
+  <div id="appContainer" class="min-h-screen flex flex-col hidden">
+
+    <!-- Header Industrial Superior -->
+    <header class="glass-panel border-b border-slate-800/80 px-4 py-2.5 flex items-center justify-between sticky top-0 z-40">
+      <div class="flex items-center space-x-3">
+        <div class="relative flex items-center justify-center">
+          <div id="wsStatusDot" class="w-3 h-3 rounded-full bg-emerald-500"></div>
+          <div class="w-3 h-3 rounded-full bg-emerald-400 animate-ping absolute"></div>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-xs sm:text-sm font-black tracking-wider text-white">Pesca AI</h1>
+            <span id="roleBadge" class="text-[10px] px-2 py-0.5 rounded font-bold uppercase mono bg-cyan-950 text-cyan-300 border border-cyan-800">PERFIL</span>
+            <span id="siliconBadge" class="hidden md:inline-block text-[10px] px-2 py-0.5 rounded font-bold uppercase mono bg-emerald-950/80 text-emerald-300 border border-emerald-700/60">
+              🛡️ MÓDULO ACTIVO: PESAJE & RENDIMIENTO
+            </span>
+          </div>
+          <p id="userLabel" class="text-[11px] text-slate-400 truncate max-w-[180px] sm:max-w-none">Usuario</p>
+        </div>
+      </div>
+
+      <!-- Selector de Vistas del Módulo Activo y Menú de Perfil / Cerrar Sesión -->
+      <div class="flex items-center space-x-2">
+        <nav class="flex bg-slate-950/90 p-1 rounded-xl border border-slate-800 text-xs">
+          <button id="navVoiceBtn" onclick="switchView('voice')" class="px-3 py-1.5 rounded-lg font-bold transition text-slate-300 hover:text-white flex items-center space-x-1">
+            <span>🎙️</span> <span class="hidden sm:inline">Control de Pesaje</span>
+          </button>
+          <button id="navExecutiveBtn" onclick="switchView('executive')" class="px-3 py-1.5 rounded-lg font-bold transition text-slate-400 hover:text-white flex items-center space-x-1">
+            <span>📊</span> <span class="hidden sm:inline">Torre Operativa</span>
+          </button>
+          <button id="navAdminBtn" onclick="switchView('admin')" class="px-3 py-1.5 rounded-lg font-bold transition text-slate-400 hover:text-white flex items-center space-x-1">
+            <span>📱</span> <span class="hidden sm:inline">Alertas Móviles</span>
+          </button>
+        </nav>
+
+        <!-- Menú Desplegable de Perfil y Botón Directo de Cerrar Sesión -->
+        <div class="relative">
+          <button id="profileMenuBtn" onclick="toggleProfileDropdown(event)" class="flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700/80 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-200 transition">
+            <span>👤</span>
+            <span id="profileMenuShortName" class="hidden md:inline max-w-[110px] truncate">Perfil</span>
+            <span class="text-[10px] text-slate-400">▾</span>
+          </button>
+
+          <div id="profileDropdown" class="hidden absolute right-0 mt-2 w-56 glass-panel rounded-2xl shadow-2xl border border-slate-700/90 p-2 z-50">
+            <div class="px-3 py-2 border-b border-slate-800/80 mb-1">
+              <p id="dropdownUserName" class="text-xs font-bold text-white truncate">Usuario</p>
+              <p id="dropdownUserRole" class="text-[10px] mono uppercase text-cyan-400">Supervisor</p>
+            </div>
+            <button onclick="switchView('voice'); closeProfileDropdown();" class="w-full text-left px-3 py-1.5 rounded-xl text-xs text-slate-300 hover:bg-slate-800/80 hover:text-white transition flex items-center space-x-2">
+              <span>🎙️</span> <span>Control de Pesaje</span>
+            </button>
+            <button onclick="switchView('executive'); closeProfileDropdown();" class="w-full text-left px-3 py-1.5 rounded-xl text-xs text-slate-300 hover:bg-slate-800/80 hover:text-white transition flex items-center space-x-2">
+              <span>📊</span> <span>Torre Operativa</span>
+            </button>
+            <button onclick="switchView('admin'); closeProfileDropdown();" class="w-full text-left px-3 py-1.5 rounded-xl text-xs text-slate-300 hover:bg-slate-800/80 hover:text-white transition flex items-center space-x-2">
+              <span>📱</span> <span>Alertas Móviles</span>
+            </button>
+            <div class="border-t border-slate-800/80 my-1"></div>
+            <button onclick="logout()" class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-red-300 bg-red-950/40 hover:bg-red-900/60 border border-red-800/50 transition flex items-center space-x-2">
+              <span>🚪</span> <span>Cerrar Sesión</span>
+            </button>
+          </div>
+        </div>
+
+        <button onclick="toggleMobileModal()" id="mobileModalToggleBtn" class="flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700/80 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition" title="Abrir Terminal Móvil / Kiosco Industrial">
+          <span>📱</span>
+          <span class="hidden md:inline">Terminal Móvil</span>
+        </button>
+
+        <button onclick="toggleLogsDrawer()" id="logsDrawerToggleBtn" class="flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700/80 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition" title="Consola de Depuración & Logs en Vivo">
+          <span>🐛</span>
+          <span class="hidden md:inline">Logs</span>
+        </button>
+
+        <button onclick="toggleCopilotSidebar()" id="copilotSidebarToggleBtn" class="flex items-center space-x-1.5 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg transition">
+          <span>💬</span>
+          <span class="hidden sm:inline">Copiloto IA</span>
+        </button>
+
+        <button onclick="logout()" title="Cerrar Sesión" class="px-2.5 py-1.5 rounded-xl bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-800/70 transition text-xs font-bold flex items-center space-x-1">
+          <span>🚪</span>
+          <span class="hidden lg:inline">Cerrar Sesión</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Barra de Arquitectura Modular End-to-End Pesquera -->
+    <div class="bg-slate-950/90 border-b border-slate-800/80 px-4 py-1.5">
+      <div class="max-w-7xl mx-auto flex items-center justify-between overflow-x-auto gap-2 text-[10px] mono">
+        <div class="flex items-center space-x-1.5 shrink-0">
+          <span class="text-slate-500 font-bold uppercase">Cadena End-to-End:</span>
+          <span class="px-2 py-0.5 rounded bg-slate-900/90 text-slate-500 border border-slate-800/80">01. Flota & Desembarque</span>
+          <span class="text-slate-600">→</span>
+          <span class="px-2.5 py-0.5 rounded bg-cyan-950/90 text-cyan-300 border border-cyan-500/60 font-bold shadow-sm">● 02. Pesaje & Deslomado (Activo)</span>
+          <span class="text-slate-600">→</span>
+          <span class="px-2 py-0.5 rounded bg-slate-900/90 text-slate-500 border border-slate-800/80">03. Esterilizado & Frío</span>
+          <span class="text-slate-600">→</span>
+          <span class="px-2 py-0.5 rounded bg-slate-900/90 text-slate-500 border border-slate-800/80">04. Empaque & Lotes</span>
+          <span class="text-slate-600">→</span>
+          <span class="px-2 py-0.5 rounded bg-slate-900/90 text-slate-500 border border-slate-800/80">05. Despacho & Exportación</span>
+        </div>
+        <span class="text-emerald-400 font-semibold shrink-0 hidden xl:inline">Infraestructura Modular Independiente</span>
+      </div>
+    </div>
+
+    <!-- Contenedor Principal -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 flex flex-col">
+
+      <!-- ==================== VISTA 1: CAPTURA DE PESAJE POR VOZ MANOS LIBRES ==================== -->
+      <section id="viewVoice" class="view-card active flex-1">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1">
+
+          <!-- COLUMNA IZQUIERDA: ORBE INTERACTIVO + CONTROLES DE LLAMADA Y MODO DE RESPUESTA -->
+          <div class="lg:col-span-5 flex flex-col space-y-3">
+            <div class="glass-panel rounded-3xl p-5 flex flex-col items-center justify-between relative shadow-2xl flex-1 min-h-[470px] overflow-hidden">
+
+              <!-- Barra de Estado de Cabecera -->
+              <div class="w-full flex justify-between items-center text-xs z-10">
+                <div class="flex items-center space-x-2">
+                  <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                  <span class="font-bold uppercase tracking-wider text-slate-200">Línea de Deslomado • Mesa 6</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <span id="voiceLatency" class="mono text-[11px] px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-cyan-400">Respuesta: Instantánea</span>
+                </div>
+              </div>
+
+              <!-- Selector de Modo de Confirmación Auditiva (3 Modos para Planta) -->
+              <div class="w-full mt-2 z-10">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-400">Modo de Confirmación por Voz:</span>
+                  <span id="activeAgentBadge" class="text-[10px] mono font-bold text-cyan-300">Módulo: Pesaje</span>
+                </div>
+                <div class="grid grid-cols-3 gap-1.5 bg-slate-950/90 p-1 rounded-xl border border-slate-800 text-[11px]">
+                  <button id="modeBtnNormal" onclick="setConfirmationMode('normal')"
+                    class="py-1.5 px-2 rounded-lg font-bold transition bg-cyan-600 text-white shadow text-center">
+                    🔊 Completa
+                  </button>
+                  <button id="modeBtnShort" onclick="setConfirmationMode('short')"
+                    class="py-1.5 px-2 rounded-lg font-bold transition text-slate-400 hover:text-white text-center">
+                    ⚡ Solo "Confirmado"
+                  </button>
+                  <button id="modeBtnBeep" onclick="setConfirmationMode('beep')"
+                    class="py-1.5 px-2 rounded-lg font-bold transition text-slate-400 hover:text-white text-center">
+                    🔔 Solo Pitido
+                  </button>
+                </div>
+              </div>
+
+              <!-- ORBE INTERACTIVO DE VOZ -->
+              <div class="my-2 flex flex-col items-center justify-center relative z-10">
+                <div id="orbWrapper" class="orb-container state-idle cursor-pointer select-none" title="Tocar para iniciar o pausar llamada manos libres">
+                  <canvas id="neuralOrbCanvas" width="300" height="300" class="rounded-full"></canvas>
+                  <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <span id="orbStateBadge" class="text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full bg-slate-950/75 border border-slate-700/70 text-cyan-300 shadow-lg backdrop-blur-md">
+                      LISTO • EN LÍNEA
+                    </span>
+                    <span id="orbSubLabel" class="text-[10px] mono text-slate-300/90 mt-1.5 font-medium text-center px-4">
+                      Inicia Llamada para dictar manos libres
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Controles de Llamada Continua y Dictado -->
+              <div class="w-full z-10 space-y-2.5">
+                <div class="flex items-center justify-center space-x-2.5">
+                  <!-- Botón Llamada Continua Manos Libres -->
+                  <button id="liveCallBtn" onclick="toggleLiveCallMode()" 
+                    class="flex-1 py-3 px-4 rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center space-x-2 transition duration-200 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 shadow-lg">
+                    <span id="liveCallIcon" class="text-base">📞</span>
+                    <span id="liveCallLabel">Iniciar Llamada Manos Libres</span>
+                  </button>
+
+                  <!-- Botón Push-to-Talk -->
+                  <button id="pttButton" 
+                    class="py-3 px-4 rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center space-x-1.5 transition duration-150 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-lg select-none">
+                    <span>🎙️</span>
+                    <span id="pttLabel">Dictar</span>
+                  </button>
+
+                  <!-- Botón Repetir Confirmación -->
+                  <button id="replayAudioBtn" onclick="replayLastKokoroAudio()" title="Repetir última confirmación"
+                    class="p-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-slate-700/80 transition">
+                    🔊
+                  </button>
+                </div>
+
+                <!-- Respuesta Puntual en Vivo -->
+                <div id="voiceFeedback" class="w-full p-3 rounded-2xl bg-slate-950/90 border border-slate-800 text-xs mono text-slate-300 leading-relaxed min-h-[58px] flex flex-col justify-center">
+                  <span class="text-[10px] uppercase text-cyan-400 font-bold block mb-0.5">Asistente de Línea:</span>
+                  <span id="voiceFeedbackText">En línea. Dicte el pesaje.</span>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Botones Rápidos de Operación y Prueba en Planta (Bloqueo Secuencial Sin Superposición de Voz) -->
+            <div class="glass-panel rounded-2xl p-3.5">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Simulador de Escenarios y Dictado Manual:</span>
+                <span id="simLockStatusBadge" class="text-[10px] mono text-emerald-400">● Listo para probar</span>
+              </div>
+              <div class="flex space-x-2 mb-2.5">
+                <input id="simTextInput" type="text" placeholder="Ej: Mesa 6, operaria 14, lomo 16.3 kilos..." 
+                  class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs mono text-slate-100 focus:outline-none focus:border-cyan-500">
+                <button id="simSubmitBtn" onclick="sendSimulatedVoice()" class="quick-sim-btn bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition">
+                  Registrar
+                </button>
+              </div>
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                <button onclick="quickVoice('Mesa 6, operaria 14, bandeja lomo 16 kilos 300 gramos', this)" class="quick-sim-btn text-[10px] bg-slate-900 hover:bg-slate-800 border border-slate-700/70 px-2.5 py-1.5 rounded-lg text-cyan-300 text-left truncate">
+                  ✅ Lomo 16.3 kg (Op 14)
+                </button>
+                <button onclick="quickVoice('Mesa 6, operaria 15, sangacho 12 kilos 400 gramos', this)" class="quick-sim-btn text-[10px] bg-slate-900 hover:bg-slate-800 border border-slate-700/70 px-2.5 py-1.5 rounded-lg text-amber-300 text-left truncate">
+                  🥩 Sangacho 12.4 kg (Op 15)
+                </button>
+                <button onclick="quickVoice('Control autoclave 2 temperatura 118.5 grados cuba 4', this)" class="quick-sim-btn text-[10px] bg-emerald-950/50 hover:bg-emerald-900/60 border border-emerald-800/70 px-2.5 py-1.5 rounded-lg text-emerald-300 text-left truncate">
+                  🌡️ Autoclave 118.5 °C
+                </button>
+                <button onclick="quickVoice('Cuál es el resumen de producción de la mesa 6', this)" class="quick-sim-btn text-[10px] bg-indigo-950/60 hover:bg-indigo-900/60 border border-indigo-800/70 px-2.5 py-1.5 rounded-lg text-indigo-300 text-left truncate">
+                  📊 Balance de Mesa 6
+                </button>
+                <button onclick="quickVoice('Parada de línea en mesa 6 por fallo en cinta 10 minutos', this)" class="quick-sim-btn text-[10px] bg-red-950/50 hover:bg-red-900/60 border border-red-800/70 px-2.5 py-1.5 rounded-lg text-red-300 text-left truncate">
+                  🚨 Parada Línea (10 min)
+                </button>
+                <button onclick="quickVoice('Mesa 6, operaria 14, lomo 48 kilos', this)" class="quick-sim-btn text-[10px] bg-amber-950/60 hover:bg-amber-900/70 border border-amber-700/70 px-2.5 py-1.5 rounded-lg text-amber-300 text-left truncate">
+                  🛡️ Peso Excedido (48 kg)
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- COLUMNA DERECHA: INDICADORES DE PRODUCCIÓN, VERIFICACIÓN DE CALIDAD Y TABLA DE PESAJES -->
+          <div class="lg:col-span-7 flex flex-col space-y-3">
+
+            <!-- KPIs de Turno en Tiempo Real -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <div class="glass-panel rounded-2xl p-3.5">
+                <span class="text-[10px] font-bold uppercase text-slate-400 block">Bandejas del Turno</span>
+                <p id="voiceKpiBandejas" class="text-2xl font-black mono text-white mt-0.5">0</p>
+                <span class="text-[10px] text-emerald-400 mono">100% Verificadas</span>
+              </div>
+              <div class="glass-panel rounded-2xl p-3.5">
+                <span class="text-[10px] font-bold uppercase text-cyan-400 block">Lomo Blanco</span>
+                <p id="voiceKpiLomo" class="text-2xl font-black mono text-cyan-400 mt-0.5">0.0 kg</p>
+                <span class="text-[10px] text-slate-400 mono">Recuperación neta</span>
+              </div>
+              <div class="glass-panel rounded-2xl p-3.5">
+                <span class="text-[10px] font-bold uppercase text-amber-400 block">Sangacho</span>
+                <p id="voiceKpiSangacho" class="text-2xl font-black mono text-amber-400 mt-0.5">0.0 kg</p>
+                <span class="text-[10px] text-slate-400 mono">Subproducto</span>
+              </div>
+              <div class="glass-panel rounded-2xl p-3.5">
+                <span class="text-[10px] font-bold uppercase text-emerald-400 block">Rendimiento</span>
+                <p id="voiceKpiRend" class="text-2xl font-black mono text-emerald-400 mt-0.5">0.0%</p>
+                <span class="text-[10px] text-slate-400 mono">Meta: > 42.0%</span>
+              </div>
+            </div>
+
+            <!-- Panel de Controles Automáticos de Seguridad y Calidad de Planta -->
+            <div class="glass-panel rounded-2xl p-4">
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <div class="flex items-center space-x-2">
+                  <span class="text-sm">🛡️</span>
+                  <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-200">
+                    Controles Automáticos de Calidad y Seguridad de Planta
+                  </h3>
+                </div>
+                <span id="lemSignatureBadge" class="text-[10px] mono px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-emerald-400">
+                  Protección Activa
+                </span>
+              </div>
+
+              <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
+                <div class="bg-slate-950/90 border border-slate-800/90 rounded-xl p-2">
+                  <span class="text-[9px] uppercase font-bold text-slate-400 block">1. Filtro Voz</span>
+                  <span id="lemLayerPre" class="text-xs font-black mono text-emerald-400">OK</span>
+                  <span class="text-[9px] text-slate-500 block">Integridad</span>
+                </div>
+                <div class="bg-slate-950/90 border border-slate-800/90 rounded-xl p-2">
+                  <span class="text-[9px] uppercase font-bold text-slate-400 block">2. Permisos</span>
+                  <span id="lemLayerTool" class="text-xs font-black mono text-emerald-400">OK</span>
+                  <span class="text-[9px] text-slate-500 block">Supervisor Mesa</span>
+                </div>
+                <div class="bg-slate-950/90 border border-slate-800/90 rounded-xl p-2">
+                  <span class="text-[9px] uppercase font-bold text-slate-400 block">3. Peso Bandeja</span>
+                  <span id="lemLayerDomain" class="text-xs font-black mono text-cyan-400">0.5 - 24 kg</span>
+                  <span class="text-[9px] text-slate-500 block">Rango Físico</span>
+                </div>
+                <div class="bg-slate-950/90 border border-slate-800/90 rounded-xl p-2">
+                  <span class="text-[9px] uppercase font-bold text-slate-400 block">4. Anti-Duplicado</span>
+                  <span id="lemLayerPost" class="text-xs font-black mono text-emerald-400">ACTIVO</span>
+                  <span class="text-[9px] text-slate-500 block">Ventana 8 seg</span>
+                </div>
+                <div class="bg-slate-950/90 border border-slate-800/90 rounded-xl p-2 col-span-2 sm:col-span-1">
+                  <span class="text-[9px] uppercase font-bold text-slate-400 block">5. Respaldo BD</span>
+                  <span id="lemLayerSql" class="text-xs font-black mono text-emerald-400">VERIFICADO</span>
+                  <span class="text-[9px] text-slate-500 block">Dato Exacto</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tabla de Pesajes Asentados en Vivo -->
+            <div class="glass-panel rounded-2xl p-4 flex-1 flex flex-col min-h-[220px]">
+              <div class="flex justify-between items-center mb-2">
+                <h3 class="text-xs font-bold uppercase text-slate-200">Historial de Pesajes Registrados en Turno</h3>
+                <span class="text-[10px] mono text-cyan-400">Actualización Automática</span>
+              </div>
+              <div class="flex-1 overflow-y-auto max-h-56">
+                <table class="w-full text-left text-xs">
+                  <thead>
+                    <tr class="border-b border-slate-800 text-slate-500 mono text-[11px]">
+                      <th class="pb-1.5">Hora</th>
+                      <th class="pb-1.5">Operaria</th>
+                      <th class="pb-1.5">Producto</th>
+                      <th class="pb-1.5">Peso Neto</th>
+                      <th class="pb-1.5">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody id="voicePesajesTable" class="divide-y divide-slate-800/60 mono text-slate-300">
+                    <tr><td colspan="5" class="py-4 text-center text-slate-500">Cargando registros de planta...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Bitácora de Operaciones y Auditoría de Calidad -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="glass-panel rounded-2xl p-3">
+                <h4 class="text-[11px] font-bold uppercase text-indigo-300 mb-1.5 flex items-center justify-between">
+                  <span>📋 Bitácora de Acciones en Línea</span>
+                  <span class="text-[9px] mono text-slate-500">Turno Actual</span>
+                </h4>
+                <div id="agentTracesLog" class="text-[10px] mono text-slate-400 space-y-1.5 max-h-28 overflow-y-auto">
+                  <div class="text-slate-600">Esperando registros...</div>
+                </div>
+              </div>
+
+              <div class="glass-panel rounded-2xl p-3">
+                <h4 class="text-[11px] font-bold uppercase text-emerald-300 mb-1.5 flex items-center justify-between">
+                  <span>🛡️ Verificación de Límites de Planta</span>
+                  <span class="text-[9px] mono text-slate-500">Automático</span>
+                </h4>
+                <div id="voiceLemLog" class="text-[10px] mono text-slate-400 space-y-1.5 max-h-28 overflow-y-auto">
+                  <div class="text-slate-600">Control de límites activo.</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ==================== VISTA 2: PANEL GERENCIAL & REPORTES ==================== -->
+      <section id="viewExecutive" class="view-card">
+        <div class="space-y-4">
+          
+          <div class="bg-gradient-to-r from-blue-950/90 via-slate-900 to-indigo-950/90 border border-slate-800 rounded-3xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <span class="text-[10px] uppercase font-extrabold tracking-widest text-cyan-400 bg-cyan-950/60 px-2.5 py-1 rounded-full border border-cyan-700/60">Torre Operativa de Planta</span>
+              <h2 class="text-lg font-black text-white mt-2">Monitoreo Industrial End-to-End — Pesca AI</h2>
+              <p class="text-xs text-slate-400">Balance de masa en vivo, control térmico de autoclaves, mermas y disponibilidad de línea</p>
+            </div>
+            <div class="flex items-center space-x-2">
+              <button onclick="speakExecutiveSummary(this)" class="quick-sim-btn bg-cyan-600 hover:bg-cyan-500 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow transition flex items-center space-x-1.5">
+                <span>🔊 Escuchar Resumen</span>
+              </button>
+              <button onclick="downloadReport()" class="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow transition flex items-center space-x-1.5">
+                <span>📄 Descargar Datos</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Métricas de Balance de Masa -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div class="glass-panel rounded-2xl p-4">
+              <span class="text-xs font-bold text-slate-400 uppercase">Total Procesado</span>
+              <p id="execTotalKg" class="text-2xl font-black mono text-white mt-1">0.0 kg</p>
+              <span class="text-[10px] text-slate-500">Masa neta en deslomado</span>
+            </div>
+            <div class="glass-panel rounded-2xl p-4">
+              <span class="text-xs font-bold text-cyan-400 uppercase">Recuperación Lomo</span>
+              <p id="execLomoKg" class="text-2xl font-black mono text-cyan-400 mt-1">0.0 kg</p>
+              <span class="text-[10px] text-slate-500">Lomo blanco exportación</span>
+            </div>
+            <div class="glass-panel rounded-2xl p-4">
+              <span class="text-xs font-bold text-amber-400 uppercase">Subproducto Sangacho</span>
+              <p id="execSangachoKg" class="text-2xl font-black mono text-amber-400 mt-1">0.0 kg</p>
+              <span class="text-[10px] text-slate-500">Derivado harinas/conserva</span>
+            </div>
+            <div class="glass-panel rounded-2xl p-4">
+              <span class="text-xs font-bold text-emerald-400 uppercase">Rendimiento Global</span>
+              <p id="execRendimiento" class="text-2xl font-black mono text-emerald-400 mt-1">0.0%</p>
+              <span class="text-[10px] text-slate-500">Meta objetivo: > 42%</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <!-- Paradas de Línea -->
+            <div class="glass-panel rounded-2xl p-4">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-red-400 mb-3 flex items-center justify-between">
+                <span>🚨 Paradas de Línea</span>
+                <span id="execParadasCount" class="text-[10px] bg-red-950 text-red-300 border border-red-800 px-2 py-0.5 rounded">0 Activas</span>
+              </h3>
+              <div id="execParadasList" class="space-y-2 text-xs max-h-52 overflow-y-auto">
+                <div class="text-slate-500 text-center py-4">Sin paradas activas registradas</div>
+              </div>
+            </div>
+
+            <!-- Registros de Calidad e Inocuidad -->
+            <div class="glass-panel rounded-2xl p-4">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-400 mb-3 flex items-center justify-between">
+                <span>🌡️ Control de Calidad e Inocuidad</span>
+                <span class="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-800 px-2 py-0.5 rounded mono">Norma Internacional</span>
+              </h3>
+              <div id="execHaccpList" class="space-y-2 text-xs max-h-52 overflow-y-auto">
+                <div class="text-slate-500 text-center py-4">Sin controles recientes</div>
+              </div>
+            </div>
+
+            <!-- Consulta Interactiva para Directivos -->
+            <div class="glass-panel rounded-2xl p-4 flex flex-col justify-between">
+              <div>
+                <h3 class="text-xs font-bold uppercase tracking-wider text-cyan-400 mb-2">Consulta Rápida de Gerencia</h3>
+                <p class="text-xs text-slate-400 mb-3">Consulte el estado de cualquier operaria, mesa o parada en tiempo real:</p>
+                <div class="flex space-x-2 mb-2">
+                  <input id="execWaQueryInput" type="text" placeholder="resumen / operaria 14 / paradas" 
+                    class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs mono focus:outline-none focus:border-cyan-500">
+                  <button onclick="sendExecWaQuery()" class="bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-2 rounded-xl text-xs font-bold">
+                    Consultar
+                  </button>
+                </div>
+              </div>
+              <div id="execWaReplyBox" class="p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs mono text-emerald-300 whitespace-pre-line max-h-40 overflow-y-auto hidden"></div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ==================== VISTA 3: ALERTAS MÓVILES WHATSAPP ==================== -->
+      <section id="viewAdmin" class="view-card">
+        <div class="max-w-xl mx-auto w-full space-y-4">
+          <div class="glass-panel rounded-3xl p-6 shadow-2xl">
+            <div class="flex items-center space-x-3 mb-4">
+              <div class="w-10 h-10 rounded-2xl bg-emerald-600/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 text-xl font-bold">
+                📱
+              </div>
+              <div>
+                <h2 class="text-sm font-extrabold uppercase tracking-wider text-white">Enlace de Alertas por WhatsApp</h2>
+                <p class="text-xs text-slate-400">Escanee el código QR para recibir reportes y alertas de paradas en tiempo real</p>
+              </div>
+            </div>
+
+            <div class="bg-slate-950 rounded-2xl border border-slate-800 p-4 mb-4 flex items-center justify-between">
+              <div>
+                <span class="text-[10px] uppercase font-bold text-slate-500 block">Estado de Conexión</span>
+                <span id="adminWaStatusLabel" class="text-xs font-bold mono text-slate-400">En reposo (Bajo demanda)</span>
+              </div>
+              <span id="adminWaPhone" class="text-xs mono text-emerald-400 font-bold"></span>
+            </div>
+
+            <div class="bg-slate-950 rounded-2xl border border-slate-800 p-6 flex flex-col items-center justify-center min-h-[260px]">
+              <div id="adminQrIdleBox" class="text-center space-y-3">
+                <div class="w-14 h-14 rounded-2xl bg-slate-900 border border-slate-700 text-cyan-400 text-2xl flex items-center justify-center mx-auto">
+                  📷
+                </div>
+                <div>
+                  <h4 class="text-sm font-bold text-slate-200">Generador de QR en Reposo</h4>
+                  <p class="text-xs text-slate-400 max-w-xs mx-auto mt-1">
+                    La generación continua está desactivada para optimizar recursos. Iníciela solo cuando desee vincular un teléfono.
+                  </p>
+                </div>
+                <button onclick="requestNewQr(false)" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-lg transition inline-flex items-center space-x-2">
+                  <span>▶️</span> <span>Iniciar Generación de QR</span>
+                </button>
+              </div>
+
+              <div id="adminQrLoading" class="text-xs mono text-cyan-400 text-center animate-pulse hidden">
+                Generando código QR bajo demanda...
+              </div>
+              <img id="adminQrImage" class="max-w-[220px] max-h-[220px] rounded-xl shadow-2xl hidden" alt="QR WhatsApp" />
+              <div id="adminConnectedBox" class="text-center hidden">
+                <div class="w-16 h-16 rounded-full bg-emerald-950/80 border border-emerald-600 text-emerald-400 text-3xl flex items-center justify-center mx-auto mb-2">
+                  ✓
+                </div>
+                <h4 class="text-sm font-bold text-emerald-400">Dispositivo Conectado</h4>
+                <p id="adminConnectedPhone" class="text-xs text-slate-300 mono mt-1"></p>
+                <p class="text-[11px] text-slate-500 mt-2">Notificaciones inmediatas de paradas de línea y consultas activas.</p>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-2 mt-4">
+              <div class="flex items-center space-x-2">
+                <button id="adminStartQrBtn" onclick="requestNewQr(true)" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3.5 py-2 rounded-xl text-xs font-bold transition">
+                  🔄 Regenerar QR
+                </button>
+                <button id="adminCancelQrBtn" onclick="cancelQrGeneration()" class="bg-amber-950/80 hover:bg-amber-900 text-amber-300 border border-amber-700/80 px-3.5 py-2 rounded-xl text-xs font-bold transition hidden">
+                  ⏹️ Cancelar QR
+                </button>
+              </div>
+              <button id="adminDisconnectBtn" onclick="disconnectWhatsApp()" class="bg-red-950/80 hover:bg-red-900 text-red-300 border border-red-800/80 px-4 py-2 rounded-xl text-xs font-bold transition hidden">
+                🔌 Desconectar Dispositivo
+              </button>
+            </div>
+          </div>
+
+          <div class="glass-panel rounded-3xl p-5">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">Enviar Mensaje de Prueba</h3>
+            <div class="space-y-2">
+              <input id="pushPhone" type="text" placeholder="Número con código de país (ej: 593999999999)" 
+                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs mono focus:outline-none focus:border-cyan-500">
+              <textarea id="pushMessage" rows="2" placeholder="Mensaje de alerta o reporte de turno..." 
+                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs mono focus:outline-none focus:border-cyan-500"></textarea>
+              <button onclick="sendPushTest()" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white py-2 rounded-xl text-xs font-bold transition">
+                Enviar Mensaje
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ==================== SIDEBAR / DRAWER DESPLEGABLE & VENTANA FLOTANTE DEL COPILOTO IA ==================== -->
+    <div id="copilotBackdrop" onclick="toggleCopilotSidebar()" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 hidden transition-opacity"></div>
+
+    <aside id="copilotSidebar" class="fixed top-0 right-0 h-full w-full sm:w-[420px] md:w-[460px] bg-slate-950/95 border-l border-slate-800/90 shadow-2xl z-50 transform translate-x-full transition-transform duration-300 flex flex-col backdrop-blur-xl">
+      <!-- Encabezado del Copiloto -->
+      <div class="p-4 border-b border-slate-800/80 flex items-center justify-between bg-slate-900/60">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-cyan-600 to-indigo-600 flex items-center justify-center text-white shadow-md">
+            🧠
+          </div>
+          <div>
+            <h3 class="text-xs font-bold text-white flex items-center space-x-1.5">
+              <span>Copiloto de Planta & Torre</span>
+              <span class="text-[9px] px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 mono">IA ACTIVA</span>
+            </h3>
+            <p class="text-[10px] text-slate-400">Control por voz, analítica y gestión de datos</p>
+          </div>
+        </div>
+        <div class="flex items-center space-x-1.5">
+          <button onclick="clearCopilotChat()" title="Limpiar conversación" class="text-xs text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition">
+            🧹
+          </button>
+          <button onclick="toggleCopilotSidebar()" class="text-xs text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- Pestañas del Copiloto (Chat Asistente vs Gráficos en Vivo vs Gestión de Registros) -->
+      <div class="flex border-b border-slate-800/80 bg-slate-950 px-2 pt-2 text-[11px] font-bold">
+        <button id="copilotTabChatBtn" onclick="switchCopilotTab('chat')" class="flex-1 py-2 text-center rounded-t-xl bg-slate-900 text-cyan-400 border-t border-x border-slate-800">
+          💬 Conversación
+        </button>
+        <button id="copilotTabAnalyticsBtn" onclick="switchCopilotTab('analytics')" class="flex-1 py-2 text-center text-slate-400 hover:text-slate-200">
+          📈 Gráficos en Vivo
+        </button>
+        <button id="copilotTabManageBtn" onclick="switchCopilotTab('manage')" class="flex-1 py-2 text-center text-slate-400 hover:text-slate-200">
+          ⚙️ Ajustes & Timeline
+        </button>
+      </div>
+
+      <!-- CONTENIDO PESTAÑA 1: CHAT CONVERSACIONAL Y ACCIONES DE INTERFAZ -->
+      <div id="copilotContentChat" class="flex-1 flex flex-col p-3 overflow-hidden">
+        <div id="copilotChatMessages" class="flex-1 overflow-y-auto space-y-2.5 pr-1 text-xs">
+          <div class="p-3 rounded-2xl bg-cyan-950/30 border border-cyan-900/40 text-cyan-200">
+            👋 <strong>¡Hola! Soy tu asistente de Pesca AI.</strong><br/>
+            Puedo registrar pesajes, asesorarte sobre el rendimiento del turno, alertarte de paradas o anular y corregir registros. ¡Háblame o escribe aquí!
+          </div>
+        </div>
+
+        <!-- Sugerencias Rápidas de un Clic -->
+        <div class="flex overflow-x-auto gap-1.5 py-2 text-[10px] mono shrink-0 no-scrollbar">
+          <button onclick="sendCopilotSuggestion('¿Cómo va el rendimiento de la mesa 6?')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 shrink-0">
+            📊 Rendimiento Mesa 6
+          </button>
+          <button onclick="sendCopilotSuggestion('Dame un resumen de las operarias activas')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 shrink-0">
+            👥 Operarias
+          </button>
+          <button onclick="sendCopilotSuggestion('Activar modo solo pitido')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 shrink-0">
+            ⚡ Modo Solo Pitido
+          </button>
+        </div>
+
+        <!-- Entrada de Chat del Sidebar -->
+        <div class="pt-2 border-t border-slate-800/80 flex items-center space-x-2">
+          <input id="copilotChatInput" type="text" placeholder="Escribe un comando o consulta..." 
+            onkeydown="if(event.key==='Enter') sendCopilotText();"
+            class="flex-1 bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500">
+          <button onclick="sendCopilotText()" class="bg-cyan-600 hover:bg-cyan-500 text-white p-2 rounded-xl text-xs font-bold transition shadow-md">
+            ➤
+          </button>
+        </div>
+      </div>
+
+      <!-- CONTENIDO PESTAÑA 2: GRÁFICOS Y ANALÍTICA EN TIEMPO REAL -->
+      <div id="copilotContentAnalytics" class="flex-1 p-3 overflow-y-auto space-y-3 text-xs hidden">
+        <div class="glass-panel rounded-2xl p-3 border border-slate-800">
+          <h4 class="text-[11px] font-bold uppercase text-slate-300 mb-2 flex justify-between">
+            <span>Distribución de Masa (kg)</span>
+            <span class="mono text-cyan-400" id="copilotAnalyticsTotal">0 kg</span>
+          </h4>
+          <div class="space-y-2">
+            <div>
+              <div class="flex justify-between text-[10px] mono text-slate-400 mb-0.5">
+                <span>Lomo Blanco (Objetivo)</span>
+                <span id="copilotBarLomoVal">0 kg (0%)</span>
+              </div>
+              <div class="w-full bg-slate-900 h-2.5 rounded-full overflow-hidden">
+                <div id="copilotBarLomo" class="bg-cyan-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-[10px] mono text-slate-400 mb-0.5">
+                <span>Sangacho (Subproducto)</span>
+                <span id="copilotBarSangachoVal">0 kg (0%)</span>
+              </div>
+              <div class="w-full bg-slate-900 h-2.5 rounded-full overflow-hidden">
+                <div id="copilotBarSangacho" class="bg-amber-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-panel rounded-2xl p-3 border border-slate-800">
+          <h4 class="text-[11px] font-bold uppercase text-emerald-400 mb-2">Top Operarias por Desempeño</h4>
+          <div id="copilotTopOperarias" class="space-y-1.5 mono text-[11px] text-slate-300">
+            <p class="text-slate-500 text-center py-2">Cargando datos de operarias...</p>
+          </div>
+        </div>
+
+        <div class="p-3 rounded-2xl bg-indigo-950/30 border border-indigo-900/50 text-[11px] text-indigo-200">
+          💡 <strong>Preparación de Dataset:</strong> Estos registros estructurados se normalizan y firman con hashes de auditoría para el fine-tuning del modelo fundacional pesquero.
+        </div>
+      </div>
+
+      <!-- CONTENIDO PESTAÑA 3: GESTIÓN DE REGISTROS, AJUSTES Y TIMELINE -->
+      <div id="copilotContentManage" class="flex-1 p-3 overflow-y-auto space-y-3 text-xs hidden">
+        <div class="flex justify-between items-center mb-1">
+          <h4 class="text-[11px] font-bold uppercase text-slate-300">Ajustes & Rectificaciones Rápidas</h4>
+          <button onclick="loadStats()" class="text-[10px] mono text-cyan-400 hover:underline">Refrescar</button>
+        </div>
+        <div id="copilotManageList" class="space-y-2">
+          <p class="text-slate-500 text-center py-4">Cargando registros recientes...</p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ==================== MODAL DE TRAZABILIDAD Y LÍNEA DE TIEMPO (VERSIONES) ==================== -->
+    <div id="timelineModal" class="fixed inset-0 bg-black/75 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+      <div class="bg-slate-950 border border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+        <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/60">
+          <div class="flex items-center space-x-2">
+            <span class="text-base">📜</span>
+            <div>
+              <h3 class="text-xs font-bold text-white">Línea de Tiempo y Trazabilidad de Auditoría</h3>
+              <p id="timelineModalSub" class="text-[10px] text-slate-400 mono">Pesaje #---</p>
+            </div>
+          </div>
+          <button onclick="closeTimelineModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">✕</button>
+        </div>
+
+        <div id="timelineModalBody" class="p-4 overflow-y-auto space-y-3 text-xs mono">
+          <div class="text-center text-slate-500 py-4">Cargando versiones del registro...</div>
+        </div>
+
+        <div class="p-3 border-t border-slate-800 bg-slate-900/40 flex justify-end">
+          <button onclick="closeTimelineModal()" class="px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition">
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== MODAL DE EDICIÓN RÁPIDA DE PESAJE ==================== -->
+    <div id="editPesajeModal" class="fixed inset-0 bg-black/75 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+      <div class="bg-slate-950 border border-slate-800 rounded-3xl w-full max-w-sm shadow-2xl p-5 space-y-3">
+        <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+          <h3 class="text-xs font-bold text-white">✏️ Rectificar Registro de Pesaje</h3>
+          <button onclick="closeEditModal()" class="text-slate-400 hover:text-white">✕</button>
+        </div>
+        <input type="hidden" id="editModalPesajeId" />
+        <div>
+          <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Peso Neto (kg):</label>
+          <input type="number" step="0.001" id="editModalPeso" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white mono" />
+        </div>
+        <div>
+          <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Tipo de Producto:</label>
+          <select id="editModalTipo" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white mono">
+            <option value="lomo">Lomo Blanco</option>
+            <option value="sangacho">Sangacho</option>
+            <option value="trozos">Trozos / Picadillo</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Motivo de Corrección (Auditoría):</label>
+          <input type="text" id="editModalMotivo" placeholder="Ej: Tara mal colocada en balanza" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white" />
+        </div>
+        <div class="flex space-x-2 pt-2">
+          <button onclick="closeEditModal()" class="flex-1 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition">Cancelar</button>
+          <button onclick="submitEditPesaje()" class="flex-1 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold transition shadow-lg">Guardar Versión</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== MODAL DISPOSITIVO MÓVIL / KIOSCO INDUSTRIAL LOCAL ==================== -->
+    <div id="mobileSimulatorModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-3 sm:p-6">
+      <div class="relative bg-slate-950 border-4 border-slate-700/80 rounded-[44px] w-full max-w-[390px] h-[780px] max-h-[94vh] shadow-2xl flex flex-col overflow-hidden ring-1 ring-cyan-500/30">
+        
+        <!-- Marco superior estilo smartphone/kiosco -->
+        <div class="pt-3 pb-2 px-6 flex justify-between items-center bg-slate-900/90 border-b border-slate-800/80">
+          <span class="text-[10px] mono text-slate-400 font-bold">12:00</span>
+          <div class="w-20 h-4 bg-slate-950 rounded-full border border-slate-800"></div>
+          <div class="flex items-center space-x-2">
+            <span class="text-[10px] mono text-emerald-400">● 5G</span>
+            <button onclick="toggleMobileModal()" class="text-xs text-slate-400 hover:text-white ml-2 p-1">✕</button>
+          </div>
+        </div>
+
+        <!-- Pantalla interna del Kiosco / App Móvil -->
+        <div class="flex-1 flex flex-col p-4 bg-slate-950 overflow-y-auto space-y-4">
+          <div class="flex justify-between items-center">
+            <div>
+              <h2 class="text-xs font-black text-white tracking-wider flex items-center space-x-1.5">
+                <span>PESCA AI</span>
+                <span class="text-[9px] px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 mono">MÓVIL</span>
+              </h2>
+              <p class="text-[10px] text-slate-400 mono">Mesa 6 • Modo Offline/Local</p>
+            </div>
+            <div id="mobStateBadge" class="text-[9px] mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold">
+              LISTO
+            </div>
+          </div>
+
+          <!-- Orbe Central del Kiosco -->
+          <div class="flex flex-col items-center justify-center py-4 bg-slate-900/50 rounded-3xl border border-slate-800/80">
+            <button onclick="quickVoice('Mesa 6, operaria 14, bandeja lomo 16 kilos 300 gramos')" 
+              class="w-28 h-28 rounded-full bg-gradient-to-tr from-cyan-950 to-indigo-950 border-2 border-cyan-400/80 flex flex-col items-center justify-center shadow-lg active:scale-95 transition">
+              <span class="text-3xl">🎙️</span>
+              <span class="text-[9px] font-bold text-cyan-300 uppercase mt-1 tracking-wider">PULSAR / HABLAR</span>
+            </button>
+            <p id="mobTranscript" class="text-[11px] text-slate-400 text-center mt-3 px-2 italic">"Hable o pulse para dictar..."</p>
+            <p id="mobFeedback" class="text-[12px] font-bold text-white text-center mt-1 px-2">En espera de pesaje</p>
+          </div>
+
+          <!-- Acciones Rápidas del Terminal -->
+          <div class="grid grid-cols-2 gap-2">
+            <button onclick="quickVoice('Mesa 6, operaria 14, lomo 16.3 kg')" class="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-[11px] font-bold text-cyan-300 text-left">
+              ✅ Lomo 16.3 kg
+            </button>
+            <button onclick="quickVoice('Mesa 6, operaria 15, sangacho 12.4 kg')" class="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-[11px] font-bold text-amber-300 text-left">
+              🥩 Sangacho 12.4 kg
+            </button>
+          </div>
+
+          <!-- Mini Lista de Registros Locales -->
+          <div class="flex-1 flex flex-col bg-slate-900/40 rounded-2xl p-3 border border-slate-800/60">
+            <span class="text-[10px] font-bold uppercase text-slate-400 mb-2">Últimos Registros del Dispositivo</span>
+            <div id="mobRecentList" class="space-y-1.5 overflow-y-auto flex-1 text-[11px] mono">
+              <p class="text-slate-500 text-center py-2">Sincronizando registros locales...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Barra inferior tipo home bar -->
+        <div class="py-2 flex justify-center bg-slate-950 border-t border-slate-900">
+          <div class="w-28 h-1 bg-slate-700 rounded-full"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== DRAWER DE CONSOLA DE DEPURACIÓN & LOGS EN VIVO ==================== -->
+    <div id="logsDrawer" class="fixed bottom-0 left-0 right-0 h-72 bg-slate-950/95 border-t-2 border-cyan-500/70 shadow-2xl z-50 transform translate-y-full transition-transform duration-300 flex flex-col backdrop-blur-xl">
+      <div class="p-2.5 px-4 bg-slate-900/90 border-b border-slate-800 flex justify-between items-center">
+        <div class="flex items-center space-x-2">
+          <span class="text-xs">🐛</span>
+          <h4 class="text-xs font-bold text-white mono">CONSOLA DE DEPURACIÓN & LOGS EN TIEMPO REAL</h4>
+          <span id="logCounterBadge" class="text-[9px] mono px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800">0 logs</span>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button onclick="clearDebugLogs()" class="text-[10px] mono bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded-lg">Limpiar</button>
+          <button onclick="toggleLogsDrawer()" class="text-xs text-slate-400 hover:text-white p-1">✕</button>
+        </div>
+      </div>
+      <div id="debugLogsContainer" class="flex-1 p-3 overflow-y-auto font-mono text-[11px] space-y-1 text-slate-300 bg-slate-950">
+        <div class="text-emerald-400">[SISTEMA] Monitor de eventos y depuración inicializado.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== LÓGICA DE CONTROL DE VOZ Y TIEMPO REAL ==================== -->
+  <script>
+    let currentUser = null;
+    let wsConnection = null;
+    let orbState = 'idle'; // 'idle' | 'listening' | 'thinking' | 'speaking' | 'rejected'
+    let liveCallActive = false;
+    let isRecording = false;
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let lastKokoroAudioBase64 = null;
+    let confirmationMode = 'normal'; // 'normal' | 'short' | 'beep'
+    let isActionBusy = false;
+    let actionLockTimeout = null;
+
+    // Stream y Nodos Persistentes para Llamada Continua 24/7
+    let persistentMicStream = null;
+    let persistentMicSource = null;
+    let micAnalyser = null;
+    let micFreqData = null;
+    let currentTtsSource = null;
+    let activeMimeType = 'audio/webm';
+    let segmentStartedAtMs = 0;
+    let liveCallStartedAtMs = 0;
+    let liveCallTurnCount = 0;
+    let wsHeartbeatInterval = null;
+    let callWatchdogInterval = null;
+
+    // Reconocimiento instantáneo paralelo en navegador (0ms STT cuando capta el pesaje)
+    let browserRecognition = null;
+    let currentTurnBrowserTranscript = '';
+
+    // Web Audio API para análisis de frecuencias en tiempo real
+    let audioCtx = null;
+    let activeAnalyser = null;
+    let freqDataArray = null;
+    let vadInterval = null;
+    let silenceStartMs = 0;
+    let speechDetectedInTurn = false;
+
+    function setActionButtonsLocked(locked, activeBtnEl = null) {
+      isActionBusy = locked;
+      if (actionLockTimeout) {
+        clearTimeout(actionLockTimeout);
+        actionLockTimeout = null;
+      }
+
+      const simBtns = document.querySelectorAll('.quick-sim-btn');
+      const replayBtn = document.getElementById('replayAudioBtn');
+      const statusBadge = document.getElementById('simLockStatusBadge');
+
+      simBtns.forEach((btn) => {
+        btn.disabled = locked;
+        if (locked && activeBtnEl && btn === activeBtnEl) {
+          btn.classList.add('active-sim-btn');
+        } else {
+          btn.classList.remove('active-sim-btn');
+        }
+      });
+
+      if (replayBtn) replayBtn.disabled = locked;
+
+      if (statusBadge) {
+        if (locked) {
+          statusBadge.innerText = '🔊 Reproduciendo voz... espere a que termine';
+          statusBadge.className = 'text-[10px] mono text-amber-400 animate-pulse';
+        } else {
+          statusBadge.innerText = '● Listo para probar';
+          statusBadge.className = 'text-[10px] mono text-emerald-400';
+        }
+      }
+
+      if (locked) {
+        // Guardián de seguridad para liberar botones si el audio tarda más de 12s
+        actionLockTimeout = setTimeout(() => {
+          setActionButtonsLocked(false);
+        }, 12000);
+      }
+    }
+
+    function ensureAudioContext() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContextClass();
+        activeAnalyser = audioCtx.createAnalyser();
+        activeAnalyser.fftSize = 256;
+        activeAnalyser.smoothingTimeConstant = 0.78;
+        freqDataArray = new Uint8Array(activeAnalyser.frequencyBinCount);
+
+        micAnalyser = audioCtx.createAnalyser();
+        micAnalyser.fftSize = 256;
+        micAnalyser.smoothingTimeConstant = 0.65;
+        micFreqData = new Uint8Array(micAnalyser.frequencyBinCount);
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function setConfirmationMode(mode, notifyServer = true) {
+      confirmationMode = mode;
+      const btnNormal = document.getElementById('modeBtnNormal');
+      const btnShort = document.getElementById('modeBtnShort');
+      const btnBeep = document.getElementById('modeBtnBeep');
+
+      const inactiveClass = 'py-1.5 px-2 rounded-lg font-bold transition text-slate-400 hover:text-white text-center';
+      btnNormal.className = inactiveClass;
+      btnShort.className = inactiveClass;
+      btnBeep.className = inactiveClass;
+
+      if (mode === 'normal') {
+        btnNormal.className = 'py-1.5 px-2 rounded-lg font-bold transition bg-cyan-600 text-white shadow text-center';
+      } else if (mode === 'short') {
+        btnShort.className = 'py-1.5 px-2 rounded-lg font-bold transition bg-emerald-600 text-white shadow text-center';
+      } else if (mode === 'beep') {
+        btnBeep.className = 'py-1.5 px-2 rounded-lg font-bold transition bg-amber-600 text-white shadow text-center';
+      }
+
+      if (notifyServer && wsConnection && wsConnection.readyState === WebSocket.OPEN) {
+        wsConnection.send(JSON.stringify({
+          type: 'CONFIG',
+          confirmationMode: mode
+        }));
+      }
+    }
+
+    function initBrowserSpeechBoost() {
+      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRec) return;
+      if (browserRecognition) {
+        try { browserRecognition.stop(); } catch (_) {}
+        browserRecognition = null;
+      }
+      try {
+        browserRecognition = new SpeechRec();
+        browserRecognition.lang = 'es-EC';
+        browserRecognition.continuous = true;
+        browserRecognition.interimResults = true;
+        browserRecognition.maxAlternatives = 1;
+
+        browserRecognition.onresult = (event) => {
+          // Ignorar eco si el asistente está hablando o procesando
+          if (orbState === 'speaking' || orbState === 'thinking' || isActionBusy) return;
+
+          let interim = '';
+          let finalStr = '';
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const t = event.results[i][0].transcript;
+            if (event.results[i].isFinal) finalStr += t + ' ';
+            else interim += t;
+          }
+          const combined = (finalStr || interim).trim();
+          if (combined) {
+            currentTurnBrowserTranscript = combined;
+            silenceStartMs = Date.now();
+            speechDetectedInTurn = true;
+
+            // Si estaba en estado durmiente y detectó palabras, despierta de inmediato en VERDE
+            if (liveCallActive && !isRecording && !isActionBusy) {
+              wakeAndCaptureVoiceSegment();
+            } else if (orbState === 'dormant' || orbState === 'listening') {
+              setOrbState('user_speaking', `🗣️ "${combined.slice(-48)}"`);
+            } else if (orbState === 'user_speaking') {
+              document.getElementById('orbSubLabel').innerText = `🗣️ "${combined.slice(-48)}"`;
+            }
+
+            // Si el navegador ya marcó la frase como final (isFinal) o detectó comando numérico/kilos claro,
+            // cortamos y procesamos rápidamente sin esperar silencios largos
+            const hasQuickKeyword = /\d/.test(combined) || /kilo|lomo|mesa|operaria|hola|confirmad/i.test(combined);
+            if (liveCallActive && isRecording && (finalStr.trim().length >= 2 || (hasQuickKeyword && combined.length >= 4))) {
+              setTimeout(() => {
+                if (isRecording && speechDetectedInTurn && (Date.now() - segmentStartedAtMs >= 300)) {
+                  stopRecording();
+                }
+              }, 220);
+            }
+          }
+        };
+
+        browserRecognition.onerror = (e) => {
+          if (liveCallActive) {
+            setTimeout(() => {
+              if (liveCallActive && browserRecognition) {
+                try { browserRecognition.start(); } catch (_) {}
+              }
+            }, 300);
+          }
+        };
+
+        browserRecognition.onend = () => {
+          if (liveCallActive) {
+            setTimeout(() => {
+              if (liveCallActive && browserRecognition) {
+                try { browserRecognition.start(); } catch (_) {}
+              }
+            }, 150);
+          }
+        };
+      } catch (_) {}
+    }
+
+    // =========================================================================
+    // VISUALIZADOR DE PARTÍCULAS REACTIVO A LA VOZ (5 COLORES DE ESTADO CLAROS)
+    // =========================================================================
+    const canvas = document.getElementById('neuralOrbCanvas');
+    const ctx = canvas.getContext('2d');
+    const NUM_PARTICLES = 135;
+    const particles = [];
+    let orbPhase = 0;
+    let smoothedAudioEnergy = 0;
+    let liveMicEnergy = 0;
+
+    for (let i = 0; i < NUM_PARTICLES; i++) {
+      const angle = (Math.PI * 2 * i) / NUM_PARTICLES + (Math.random() - 0.5) * 0.2;
+      const ring = i % 3;
+      const baseRadius = ring === 0 ? 36 + Math.random() * 20 : ring === 1 ? 65 + Math.random() * 24 : 94 + Math.random() * 20;
+      particles.push({
+        angle,
+        baseRadius,
+        radius: baseRadius,
+        speed: (0.004 + Math.random() * 0.008) * (i % 2 === 0 ? 1 : -1),
+        size: 1.6 + Math.random() * 2.4,
+        ring,
+        pulseOffset: Math.random() * Math.PI * 2,
+        x: 150,
+        y: 150
+      });
+    }
+
+    function getPalettesForState(state) {
+      switch (state) {
+        case 'user_speaking': // 🟢 VERDE ESMERALDA: Cuando el usuario está hablando
+          return {
+            core: 'rgba(16, 185, 129, 0.58)',
+            particle: '#34d399',
+            synapse: 'rgba(52, 211, 153, ',
+            glow: '#10b981'
+          };
+        case 'thinking': // 🟡 ÁMBAR / DORADO: Cuando procesa o razona
+          return {
+            core: 'rgba(245, 158, 11, 0.55)',
+            particle: '#fbbf24',
+            synapse: 'rgba(251, 191, 36, ',
+            glow: '#f59e0b'
+          };
+        case 'speaking': // 🟣 VIOLETA / CIAN: Cuando el asistente responde con voz
+          return {
+            core: 'rgba(139, 92, 246, 0.55)',
+            particle: '#38bdf8',
+            synapse: 'rgba(167, 139, 250, ',
+            glow: '#8b5cf6'
+          };
+        case 'rejected': // 🔴 ROJO: Cuando hay una alerta de límite o bloqueo
+          return {
+            core: 'rgba(239, 68, 68, 0.58)',
+            particle: '#f87171',
+            synapse: 'rgba(248, 113, 113, ',
+            glow: '#ef4444'
+          };
+        case 'dormant': // 🔵 AZUL PROFUNDO CALMO: Proceso durmiente en espera (sin grabar)
+        case 'listening':
+        default:
+          return {
+            core: 'rgba(59, 130, 246, 0.26)',
+            particle: '#60a5fa',
+            synapse: 'rgba(96, 165, 250, ',
+            glow: '#3b82f6'
+          };
+      }
+    }
+
+    function renderNeuralOrb() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      orbPhase += 0.025;
+
+      if (micAnalyser && micFreqData && (isRecording || liveCallActive)) {
+        micAnalyser.getByteFrequencyData(micFreqData);
+        let mSum = 0;
+        // Bines 3 a 36 corresponden al rango fundamental de la voz humana (~180Hz - 3000Hz)
+        for (let i = 3; i < 36; i++) {
+          mSum += micFreqData[i];
+        }
+        const instMic = mSum / (33 * 255);
+        liveMicEnergy = liveMicEnergy * 0.65 + instMic * 0.35;
+      } else {
+        liveMicEnergy = 0;
+      }
+
+      let rawAudio = 0;
+      if (orbState === 'speaking' && activeAnalyser && freqDataArray) {
+        activeAnalyser.getByteFrequencyData(freqDataArray);
+        let sum = 0;
+        for (let i = 0; i < 64; i++) sum += freqDataArray[i];
+        rawAudio = sum / (64 * 255);
+      } else if (orbState === 'user_speaking') {
+        rawAudio = Math.max(0.22, liveMicEnergy * 1.65);
+      } else if (orbState === 'thinking') {
+        rawAudio = 0.35 + Math.sin(orbPhase * 4.5) * 0.18;
+      } else {
+        // Estado durmiente o en reposo: respiración suave y serena
+        rawAudio = 0.04 + Math.sin(orbPhase * 1.1) * 0.025;
+      }
+
+      smoothedAudioEnergy = smoothedAudioEnergy * 0.78 + rawAudio * 0.22;
+      const palette = getPalettesForState(orbState);
+
+      const coreRadius = 40 + smoothedAudioEnergy * 44;
+      const grad = ctx.createRadialGradient(cx, cy, 4, cx, cy, coreRadius * 2.1);
+      grad.addColorStop(0, palette.core);
+      grad.addColorStop(0.55, 'rgba(15, 23, 42, 0.3)');
+      grad.addColorStop(1, 'rgba(2, 6, 23, 0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, coreRadius * 2.1, 0, Math.PI * 2);
+      ctx.fill();
+
+      const speedMultiplier =
+        orbState === 'thinking'
+          ? 3.4
+          : orbState === 'user_speaking'
+          ? 2.4
+          : orbState === 'speaking'
+          ? 2.1
+          : 0.85;
+
+      for (let i = 0; i < NUM_PARTICLES; i++) {
+        const p = particles[i];
+        p.angle += p.speed * speedMultiplier;
+
+        let freqBoost = 0;
+        if (orbState === 'speaking' && freqDataArray) {
+          const binIdx = i % 48;
+          freqBoost = (freqDataArray[binIdx] / 255) * 38;
+        } else if (orbState === 'user_speaking' && micFreqData) {
+          const binIdx = i % 42;
+          freqBoost = (micFreqData[binIdx] / 255) * 46;
+        }
+
+        const wave = Math.sin(orbPhase * 2 + p.pulseOffset) * (6 + smoothedAudioEnergy * 20);
+        const targetRadius = p.baseRadius + wave + freqBoost * (p.ring === 2 ? 1.15 : 0.7);
+        p.radius = p.radius * 0.75 + targetRadius * 0.25;
+
+        p.x = cx + Math.cos(p.angle) * p.radius;
+        p.y = cy + Math.sin(p.angle) * p.radius;
+      }
+
+      const maxDist = 40 + smoothedAudioEnergy * 28;
+      ctx.lineWidth = 0.85;
+      for (let i = 0; i < NUM_PARTICLES; i++) {
+        const p1 = particles[i];
+        for (let j = i + 1; j < NUM_PARTICLES; j += 2) {
+          const p2 = particles[j];
+          const dx = p1.x - p2.x;
+          const dy = p1.y - p2.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < maxDist) {
+            const alpha = (1 - dist / maxDist) * (0.35 + smoothedAudioEnergy * 0.55);
+            ctx.strokeStyle = `${palette.synapse}${alpha.toFixed(3)})`;
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+          }
+        }
+      }
+
+      for (let i = 0; i < NUM_PARTICLES; i++) {
+        const p = particles[i];
+        const dynamicSize = p.size + smoothedAudioEnergy * 2.6;
+        ctx.fillStyle = palette.particle;
+        ctx.shadowBlur = 10 + smoothedAudioEnergy * 14;
+        ctx.shadowColor = palette.glow;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, dynamicSize, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.shadowBlur = 0;
+
+      ctx.strokeStyle = `${palette.synapse}${(0.22 + smoothedAudioEnergy * 0.45).toFixed(2)})`;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      for (let a = 0; a <= Math.PI * 2; a += 0.08) {
+        const r = 118 + Math.sin(a * 6 + orbPhase * 3) * (3 + smoothedAudioEnergy * 18);
+        const rx = cx + Math.cos(a) * r;
+        const ry = cy + Math.sin(a) * r;
+        if (a === 0) ctx.moveTo(rx, ry);
+        else ctx.lineTo(rx, ry);
+      }
+      ctx.closePath();
+      ctx.stroke();
+
+      requestAnimationFrame(renderNeuralOrb);
+    }
+
+    requestAnimationFrame(renderNeuralOrb);
+
+    function setOrbState(newState, subText = '') {
+      orbState = newState;
+      const wrapper = document.getElementById('orbWrapper');
+      const badge = document.getElementById('orbStateBadge');
+      const sub = document.getElementById('orbSubLabel');
+
+      wrapper.className = `orb-container state-${newState} cursor-pointer select-none`;
+
+      if (newState === 'user_speaking') {
+        badge.innerText = '🟢 VOZ DETECTADA • CAPTANDO';
+        badge.className = 'text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full bg-emerald-950/95 border border-emerald-400 text-emerald-200 shadow-lg';
+        sub.innerText = subText || 'Escuchando tu dictado...';
+      } else if (newState === 'dormant' || newState === 'listening') {
+        badge.innerText = liveCallActive ? '🔵 EN ESPERA • HABLE AHORA' : '🎙️ ESCUCHANDO VOZ';
+        badge.className = 'text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full bg-blue-950/90 border border-blue-400/80 text-blue-200 shadow-lg';
+        sub.innerText = subText || (liveCallActive ? 'Modo durmiente activo (sin grabar silencio)' : 'Capturando dictado...');
+      } else if (newState === 'thinking') {
+        badge.innerText = '🟡 PROCESANDO Y VERIFICANDO';
+        badge.className = 'text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full bg-amber-950/95 border border-amber-400 text-amber-200 shadow-lg';
+        sub.innerText = subText || 'Validando datos al instante...';
+      } else if (newState === 'speaking') {
+        badge.innerText = '🟣 ASISTENTE RESPONDIENDO';
+        badge.className = 'text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full bg-indigo-950/95 border border-purple-400 text-cyan-200 shadow-lg';
+        sub.innerText = subText || 'Confirmando operación...';
+      } else if (newState === 'rejected') {
+        badge.innerText = '🔴 ALERTA DE LÍMITE';
+        badge.className = 'text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full bg-red-950/95 border border-red-500 text-red-200 shadow-lg';
+        sub.innerText = subText || 'Verifique el dato dictado';
+      } else {
+        badge.innerText = liveCallActive ? '🔵 EN ESPERA • HABLE AHORA' : 'LISTO • EN LÍNEA';
+        badge.className = 'text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full bg-slate-950/75 border border-slate-700/70 text-cyan-300 shadow-lg';
+        sub.innerText = subText || (liveCallActive ? 'Modo durmiente activo' : 'Toca el círculo para activar escucha');
+      }
+    }
+
+    // =========================================================================
+    // REPRODUCCIÓN DE VOZ NATURAL DE PLANTA (CON TIMEOUT DE SEGURIDAD ANTI-BLOQUEO)
+    // =========================================================================
+    let speakingSafetyTimer = null;
+
+    function stopCurrentTtsPlayback() {
+      if (speakingSafetyTimer) {
+        clearTimeout(speakingSafetyTimer);
+        speakingSafetyTimer = null;
+      }
+      if (currentTtsSource) {
+        try {
+          currentTtsSource.onended = null;
+          currentTtsSource.stop();
+        } catch (_) {}
+        currentTtsSource = null;
+      }
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    }
+
+    function resumeListeningIfLiveCall() {
+      if (speakingSafetyTimer) {
+        clearTimeout(speakingSafetyTimer);
+        speakingSafetyTimer = null;
+      }
+      setActionButtonsLocked(false);
+      if (liveCallActive) {
+        enterDormantVoiceMonitor(true);
+      } else {
+        setOrbState('idle');
+      }
+    }
+
+    async function playKokoroBase64Audio(base64Audio, fallbackText = '') {
+      try {
+        ensureAudioContext();
+        if (audioCtx.state === 'suspended') {
+          await audioCtx.resume().catch(() => {});
+        }
+        lastKokoroAudioBase64 = base64Audio;
+        stopCurrentTtsPlayback();
+
+        const binaryString = atob(base64Audio);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        const arrayBuffer = bytes.buffer.slice(0);
+        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+
+        const source = audioCtx.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(activeAnalyser);
+        activeAnalyser.connect(audioCtx.destination);
+        currentTtsSource = source;
+
+        setOrbState('speaking', fallbackText ? fallbackText.slice(0, 48) : 'Confirmando registro...');
+
+        // Guardián exacto basado en la duración del audio (+350ms) por si el navegador suspende onended
+        const maxDurationMs = Math.min(Math.max(Math.ceil((audioBuffer.duration || 2.5) * 1000) + 350, 900), 8000);
+        speakingSafetyTimer = setTimeout(() => {
+          if (orbState === 'speaking') {
+            currentTtsSource = null;
+            resumeListeningIfLiveCall();
+          }
+        }, maxDurationMs);
+
+        source.onended = () => {
+          currentTtsSource = null;
+          resumeListeningIfLiveCall();
+        };
+
+        source.start(0);
+      } catch (err) {
+        console.warn('Error reproduciendo audio:', err);
+        resumeListeningIfLiveCall();
+      }
+    }
+
+    function replayLastKokoroAudio() {
+      if (isActionBusy || orbState === 'speaking' || orbState === 'thinking') return;
+      setActionButtonsLocked(true, document.getElementById('replayAudioBtn'));
+      if (lastKokoroAudioBase64) {
+        playKokoroBase64Audio(lastKokoroAudioBase64);
+      } else {
+        const txt = document.getElementById('voiceFeedbackText').innerText;
+        requestAndPlayKokoro(txt);
+      }
+    }
+
+    async function requestAndPlayKokoro(text) {
+      try {
+        setOrbState('thinking', 'Generando confirmación...');
+        const res = await fetch('/api/tts/speak', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, voice: 'ef_dora' })
+        });
+        if (!res.ok) throw new Error('TTS HTTP ' + res.status);
+        const buf = await res.arrayBuffer();
+        let binary = '';
+        const bytes = new Uint8Array(buf);
+        for (let i = 0; i < bytes.byteLength; i++) {
+          binary += String.fromCharCode(bytes[i]);
+        }
+        await playKokoroBase64Audio(btoa(binary), text);
+      } catch (_) {
+        resumeListeningIfLiveCall();
+      }
+    }
+
+    function playConfirmationBeep(success = true, isDoubleBeep = false) {
+      try {
+        ensureAudioContext();
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        if (success) {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(960, now);
+          if (isDoubleBeep) {
+            osc.frequency.setValueAtTime(1240, now + 0.08);
+          }
+          gain.gain.setValueAtTime(0.16, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + (isDoubleBeep ? 0.18 : 0.11));
+          osc.start(now);
+          osc.stop(now + (isDoubleBeep ? 0.18 : 0.11));
+        } else {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(220, now);
+          gain.gain.setValueAtTime(0.18, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+          osc.start(now);
+          osc.stop(now + 0.32);
+        }
+      } catch (_) {}
+    }
+
+    // =========================================================================
+    // CONEXIÓN EN TIEMPO REAL 24/7 (/ws/voice)
+    // =========================================================================
+    function connectRealtimeWebSocket() {
+      const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${proto}//${window.location.host}/ws/voice`;
+      wsConnection = new WebSocket(wsUrl);
+
+      wsConnection.onopen = () => {
+        document.getElementById('wsStatusDot').className = 'w-3 h-3 rounded-full bg-emerald-500';
+        wsConnection.send(JSON.stringify({
+          type: 'CONFIG',
+          role: currentUser ? currentUser.rol : 'supervisor',
+          voice: 'ef_dora',
+          confirmationMode
+        }));
+
+        if (wsHeartbeatInterval) clearInterval(wsHeartbeatInterval);
+        wsHeartbeatInterval = setInterval(() => {
+          if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
+            wsConnection.send(JSON.stringify({ type: 'PING' }));
+          }
+        }, 15000);
+      };
+
+      wsConnection.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'ORB_STATE') {
+            setOrbState(msg.state, msg.stage || '');
+          } else if (msg.type === 'MODE_UPDATED' && msg.confirmationMode) {
+            setConfirmationMode(msg.confirmationMode, false);
+          } else if (msg.type === 'TRANSCRIPTION_READY') {
+            document.getElementById('voiceFeedbackText').innerText = `🗣️ "${msg.text}"`;
+          } else if (msg.type === 'NO_SPEECH_DETECTED') {
+            setActionButtonsLocked(false);
+            if (liveCallActive) {
+              enterDormantVoiceMonitor(true);
+            } else {
+              setOrbState('idle', 'Listo para dictar');
+            }
+          } else if (msg.type === 'AGENT_RESULT') {
+            liveCallTurnCount = msg.turn || (liveCallTurnCount + 1);
+            handleVoiceResponse(msg, msg.totalPipelineMs || msg.latencyMs);
+          } else if (msg.type === 'ERROR') {
+            setActionButtonsLocked(false);
+            if (liveCallActive) {
+              enterDormantVoiceMonitor(true);
+            } else {
+              setOrbState('idle', 'En línea');
+            }
+          }
+        } catch (e) {
+          console.error('Error procesando mensaje:', e);
+        }
+      };
+
+      wsConnection.onclose = () => {
+        document.getElementById('wsStatusDot').className = 'w-3 h-3 rounded-full bg-amber-500';
+        setTimeout(connectRealtimeWebSocket, 2000);
+      };
+    }
+
+    // =========================================================================
+    // MOTOR DE AUDIO Y DETECCIÓN DE VOZ CONTINUA MULTI-TURNO
+    // =========================================================================
+    let audioRecordStream = null;
+
+    async function ensurePersistentMicStream() {
+      ensureAudioContext();
+      if (audioCtx.state === 'suspended') {
+        await audioCtx.resume().catch(() => {});
+      }
+
+      const tracksAlive =
+        persistentMicStream &&
+        persistentMicStream.getAudioTracks().some((t) => t.readyState === 'live' && t.enabled);
+
+      if (!tracksAlive) {
+        persistentMicStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+        });
+        persistentMicSource = audioCtx.createMediaStreamSource(persistentMicStream);
+        persistentMicSource.connect(micAnalyser);
+
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+          activeMimeType = 'audio/webm;codecs=opus';
+        } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+          activeMimeType = 'audio/webm';
+        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+          activeMimeType = 'audio/mp4';
+        } else {
+          activeMimeType = '';
+        }
+      }
+      return persistentMicStream;
+    }
+
+    function releasePersistentMicStream() {
+      if (vadInterval) {
+        clearInterval(vadInterval);
+        vadInterval = null;
+      }
+      if (callWatchdogInterval) {
+        clearInterval(callWatchdogInterval);
+        callWatchdogInterval = null;
+      }
+      if (browserRecognition) {
+        try { browserRecognition.stop(); } catch (_) {}
+      }
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        try {
+          mediaRecorder.onstop = null;
+          mediaRecorder.stop();
+        } catch (_) {}
+      }
+      mediaRecorder = null;
+      isRecording = false;
+      audioChunks = [];
+
+      if (persistentMicStream) {
+        persistentMicStream.getTracks().forEach((t) => t.stop());
+        persistentMicStream = null;
+      }
+    }
+
+    async function toggleLiveCallMode() {
+      const btn = document.getElementById('liveCallBtn');
+      const label = document.getElementById('liveCallLabel');
+      const icon = document.getElementById('liveCallIcon');
+
+      if (liveCallActive) {
+        liveCallActive = false;
+        stopCurrentTtsPlayback();
+        setActionButtonsLocked(false);
+        releasePersistentMicStream();
+        btn.className = 'flex-1 py-3 px-4 rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center space-x-2 transition duration-200 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 shadow-lg';
+        icon.innerText = '📞';
+        label.innerText = 'Iniciar Llamada Manos Libres';
+        setOrbState('idle', 'Llamada finalizada');
+        return;
+      }
+
+      try {
+        await ensurePersistentMicStream();
+      } catch (err) {
+        setOrbState('idle', 'Active el permiso de micrófono');
+        return;
+      }
+
+      liveCallActive = true;
+      liveCallStartedAtMs = Date.now();
+      liveCallTurnCount = 0;
+
+      initBrowserSpeechBoost();
+      if (browserRecognition) {
+        try { browserRecognition.start(); } catch (_) {}
+      }
+
+      btn.className = 'flex-1 py-3 px-4 rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center space-x-2 transition duration-200 bg-red-600 hover:bg-red-500 text-white border border-red-400 shadow-lg shadow-red-950/60';
+      icon.innerText = '🔴';
+      label.innerText = 'Finalizar Llamada Activa';
+
+      if (callWatchdogInterval) clearInterval(callWatchdogInterval);
+      callWatchdogInterval = setInterval(() => {
+        if (!liveCallActive) return;
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume().catch(() => {});
+        }
+        if (orbState !== 'speaking' && orbState !== 'thinking' && !isRecording && !isActionBusy) {
+          if (orbState !== 'dormant') {
+            enterDormantVoiceMonitor();
+          }
+        }
+      }, 1200);
+
+      await enterDormantVoiceMonitor();
+
+      // Saludo proactivo del asistente al iniciar la llamada manos libres
+      if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
+        wsConnection.send(JSON.stringify({ type: 'GREET', voice: 'ef_dora', confirmationMode }));
+      }
+    }
+
+    /**
+     * Modo Durmiente Continuo: Monitorea el micrófono con alta sensibilidad y nunca se suspende.
+     * En cuanto detecta voz humana (>0.012) o cualquier texto del navegador, despierta en VERDE inmediatamente.
+     */
+    async function enterDormantVoiceMonitor(force = false) {
+      if (!liveCallActive || isRecording || isActionBusy) return;
+      // Solo se evita re-armar si el asistente sigue hablando/pensando, salvo que se fuerce
+      // explícitamente al terminar una respuesta (evita quedar colgado en 'speaking'/'thinking').
+      if (!force && (orbState === 'speaking' || orbState === 'thinking')) return;
+
+      await ensurePersistentMicStream();
+      audioChunks = [];
+      currentTurnBrowserTranscript = '';
+      speechDetectedInTurn = false;
+
+      // Garantizar que browserRecognition siga vivo continuamente
+      if (browserRecognition) {
+        try { browserRecognition.start(); } catch (_) {}
+      }
+
+      setOrbState('dormant', 'En espera • Hable en cualquier momento');
+
+      if (vadInterval) clearInterval(vadInterval);
+
+      vadInterval = setInterval(() => {
+        if (!liveCallActive || isRecording || isActionBusy || orbState === 'speaking' || orbState === 'thinking') return;
+
+        // Umbral de sensibilidad acústica ultra-preciso (0.012 para captar voz natural sin forzar gritos)
+        if (liveMicEnergy > 0.012 || currentTurnBrowserTranscript.length > 0) {
+          clearInterval(vadInterval);
+          vadInterval = null;
+          wakeAndCaptureVoiceSegment();
+        }
+      }, 35);
+    }
+
+    /**
+     * Captura el segmento de voz del usuario con MediaRecorder activo:
+     * Cuando detecta 650ms de silencio, detiene la grabación y envía el audio de inmediato.
+     */
+    async function wakeAndCaptureVoiceSegment() {
+      if (!liveCallActive || isRecording || isActionBusy) return;
+
+      try {
+        const stream = await ensurePersistentMicStream();
+        audioChunks = [];
+        speechDetectedInTurn = true;
+        silenceStartMs = Date.now();
+        segmentStartedAtMs = Date.now();
+        isRecording = true;
+
+        mediaRecorder = activeMimeType ? new MediaRecorder(stream, { mimeType: activeMimeType }) : new MediaRecorder(stream);
+
+        const extFilename = activeMimeType.includes('mp4') ? 'dictado.mp4' : 'dictado.webm';
+        if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
+          wsConnection.send(JSON.stringify({
+            type: 'START_AUDIO',
+            filename: extFilename
+          }));
+        }
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) {
+            audioChunks.push(e.data);
+            if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
+              wsConnection.send(e.data);
+            }
+          }
+        };
+
+        mediaRecorder.onstop = () => {
+          isRecording = false;
+          const capturedText = currentTurnBrowserTranscript;
+          currentTurnBrowserTranscript = '';
+          sendRecordedAudio(capturedText, audioChunks.slice());
+        };
+
+        mediaRecorder.start(100);
+
+        setOrbState(
+          'user_speaking',
+          currentTurnBrowserTranscript
+            ? `🗣️ "${currentTurnBrowserTranscript.slice(-48)}"`
+            : 'Escuchando tu voz...'
+        );
+
+        if (vadInterval) clearInterval(vadInterval);
+        vadInterval = setInterval(() => {
+          if (!liveCallActive || !isRecording) return;
+
+          if (liveMicEnergy > 0.012) {
+            silenceStartMs = Date.now();
+          } else if (Date.now() - silenceStartMs > 850 && (Date.now() - segmentStartedAtMs > 400)) {
+            // Silencio detectado tras dictar de forma fluida -> procesar
+            clearInterval(vadInterval);
+            vadInterval = null;
+            stopRecording();
+          } else if (Date.now() - segmentStartedAtMs > 15000) {
+            // Límite de seguridad
+            clearInterval(vadInterval);
+            vadInterval = null;
+            stopRecording();
+          }
+        }, 45);
+      } catch (err) {
+        isRecording = false;
+        if (liveCallActive) enterDormantVoiceMonitor();
+      }
+    }
+
+    async function startRecording(isContinuousVad = false) {
+      if (orbState === 'speaking') {
+        stopCurrentTtsPlayback();
+        setActionButtonsLocked(false);
+      }
+      if (isContinuousVad) {
+        if (!liveCallActive) {
+          await toggleLiveCallMode();
+        } else {
+          await enterDormantVoiceMonitor();
+        }
+        return;
+      }
+
+      if (isRecording) return;
+      try {
+        const stream = await ensurePersistentMicStream();
+        audioChunks = [];
+        currentTurnBrowserTranscript = '';
+        isRecording = true;
+        speechDetectedInTurn = true;
+        segmentStartedAtMs = Date.now();
+
+        mediaRecorder = activeMimeType ? new MediaRecorder(stream, { mimeType: activeMimeType }) : new MediaRecorder(stream);
+        const extFilename = activeMimeType.includes('mp4') ? 'dictado.mp4' : 'dictado.webm';
+
+        if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
+          wsConnection.send(JSON.stringify({
+            type: 'START_AUDIO',
+            filename: extFilename
+          }));
+        }
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) {
+            audioChunks.push(e.data);
+            if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
+              wsConnection.send(e.data);
+            }
+          }
+        };
+
+        mediaRecorder.onstop = () => {
+          isRecording = false;
+          const capturedText = currentTurnBrowserTranscript;
+          currentTurnBrowserTranscript = '';
+          if (!liveCallActive) {
+            releasePersistentMicStream();
+          }
+          sendRecordedAudio(capturedText, audioChunks.slice());
+        };
+
+        mediaRecorder.start(100);
+        setOrbState('user_speaking', 'Escuchando dictado...');
+      } catch (err) {
+        isRecording = false;
+        setOrbState('idle', 'Active permisos de micrófono');
+      }
+    }
+
+    function stopRecording() {
+      if (!isRecording) return;
+      if (vadInterval) {
+        clearInterval(vadInterval);
+        vadInterval = null;
+      }
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        try {
+          mediaRecorder.stop();
+        } catch (_) {}
+      } else {
+        isRecording = false;
+        const capturedText = currentTurnBrowserTranscript;
+        currentTurnBrowserTranscript = '';
+        sendRecordedAudio(capturedText, audioChunks.slice());
+      }
+    }
+
+    const pttButton = document.getElementById('pttButton');
+    const orbWrapper = document.getElementById('orbWrapper');
+
+    pttButton.addEventListener('mousedown', () => startRecording(false));
+    pttButton.addEventListener('mouseup', () => stopRecording());
+    pttButton.addEventListener('touchstart', (e) => { e.preventDefault(); startRecording(false); });
+    pttButton.addEventListener('touchend', (e) => { e.preventDefault(); stopRecording(); });
+
+    orbWrapper.addEventListener('click', () => {
+      if (orbState === 'speaking') {
+        stopCurrentTtsPlayback();
+        setActionButtonsLocked(false);
+        if (liveCallActive) enterDormantVoiceMonitor(true);
+        else startRecording(false);
+        return;
+      }
+      if (isRecording && speechDetectedInTurn) {
+        stopRecording();
+      } else {
+        toggleLiveCallMode();
+      }
+    });
+
+    async function sendRecordedAudio(browserTranscript = '', rawChunks = []) {
+      if ((!rawChunks || rawChunks.length === 0) && !browserTranscript) {
+        if (liveCallActive) enterDormantVoiceMonitor(true);
+        return;
+      }
+      setActionButtonsLocked(true);
+      setOrbState('thinking', 'Procesando registro...');
+
+      if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
+        wsConnection.send(JSON.stringify({
+          type: 'END_AUDIO',
+          browserTranscript: browserTranscript || '',
+          confirmationMode
+        }));
+        return;
+      }
+
+      const audioBlob = new Blob(rawChunks, { type: activeMimeType || 'audio/webm' });
+      const formData = new FormData();
+      formData.append('audio', audioBlob, activeMimeType.includes('mp4') ? 'dictado.mp4' : 'dictado.webm');
+      formData.append('include_tts', 'true');
+      formData.append('confirmation_mode', confirmationMode);
+      if (browserTranscript) formData.append('browser_transcript', browserTranscript);
+
+      try {
+        const t0 = performance.now();
+        const res = await fetch('/api/pesaje/voice', { method: 'POST', body: formData });
+        const data = await res.json();
+        const t1 = performance.now();
+        if (data.noSpeechDetected) {
+          setActionButtonsLocked(false);
+          if (liveCallActive) enterDormantVoiceMonitor(true);
+          else setOrbState('idle');
+          return;
+        }
+        handleVoiceResponse(data, Math.round(t1 - t0));
+      } catch (err) {
+        setOrbState('rejected', 'Error de conexión');
+        playConfirmationBeep(false);
+        resumeListeningIfLiveCall();
+      }
+    }
+
+    async function submitTextCommand(text, triggerBtn = null) {
+      // Bloqueo secuencial: no permite lanzar un nuevo escenario hasta que termine de hablar el actual
+      if (isActionBusy || orbState === 'speaking' || orbState === 'thinking') {
+        return;
+      }
+
+      setActionButtonsLocked(true, triggerBtn);
+      setOrbState('thinking', `Procesando: "${text.slice(0, 32)}..."`);
+      document.getElementById('voiceFeedbackText').innerText = `⚙️ Procesando: "${text}"`;
+
+      if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
+        wsConnection.send(JSON.stringify({
+          type: 'TEXT_COMMAND',
+          text,
+          includeTts: true,
+          confirmationMode
+        }));
+        return;
+      }
+
+      const t0 = performance.now();
+      try {
+        const res = await fetch('/api/pesaje/text', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, include_tts: true, confirmation_mode: confirmationMode })
+        });
+        const data = await res.json();
+        const t1 = performance.now();
+        handleVoiceResponse(data, Math.round(t1 - t0));
+      } catch (err) {
+        setOrbState('rejected', err.message);
+        playConfirmationBeep(false);
+        resumeListeningIfLiveCall();
+      }
+    }
+
+    // =========================================================================
+    // PROCESAMIENTO DE RESPUESTA DE PLANTA
+    // =========================================================================
+    const AGENT_LABELS = {
+      YieldDeslomadoAgent: 'Control de Pesaje',
+      MaintenanceOEEAgent: 'Mantenimiento de Línea',
+      HaccpThermalQualityAgent: 'Control de Calidad',
+      ExecutiveControlTowerAgent: 'Balance de Planta',
+      SupervisorCopilotAgent: 'Asistente de Planta',
+      LemSecuritySentinel: 'Protección de Planta'
+    };
+
+    function handleVoiceResponse(data, totalMs) {
+      document.getElementById('voiceLatency').innerText = `Tiempo: ${data.latencyMs || totalMs} ms`;
+
+      if (data.confirmationMode) {
+        setConfirmationMode(data.confirmationMode, false);
+      }
+
+      if (data.agentUsed) {
+        const friendlyAgent = AGENT_LABELS[data.agentUsed] || 'Control de Planta';
+        document.getElementById('activeAgentBadge').innerText = `Módulo: ${friendlyAgent}`;
+      }
+
+      if (data.lemLayers) {
+        document.getElementById('lemLayerPre').innerText = 'OK';
+        document.getElementById('lemLayerTool').innerText = 'OK';
+        document.getElementById('lemLayerDomain').innerText = data.success ? 'EN RANGO' : 'FUERA DE LÍMITE';
+        document.getElementById('lemLayerDomain').className = data.success
+          ? 'text-xs font-black mono text-cyan-400'
+          : 'text-xs font-black mono text-red-400';
+        document.getElementById('lemLayerPost').innerText = 'OK';
+        document.getElementById('lemLayerSql').innerText = 'VERIFICADO';
+        document.getElementById('lemSignatureBadge').innerText = data.success ? 'Registro Verificado' : 'Bloqueo Preventivo';
+      }
+
+      const fbBox = document.getElementById('voiceFeedback');
+      const fbText = document.getElementById('voiceFeedbackText');
+
+      if (data.success) {
+        playConfirmationBeep(true, data.skipTtsSpeech === true);
+        const iconPrefix = data.action === 'CONVERSACION_COPILOTO' ? '💬' : data.action === 'PESAJE_CORREGIDO' ? '🔄' : '✅';
+        fbText.innerText = `${iconPrefix} ${data.audioFeedback}`;
+        fbBox.className = 'w-full p-3 rounded-2xl bg-emerald-950/35 border border-emerald-700/70 text-xs mono text-emerald-200 leading-relaxed min-h-[58px] flex flex-col justify-center';
+      } else {
+        playConfirmationBeep(false);
+        setOrbState('rejected', 'Alerta de validación');
+        fbText.innerText = `⚠️ ${data.audioFeedback}`;
+        fbBox.className = 'w-full p-3 rounded-2xl bg-red-950/40 border border-red-700/80 text-xs mono text-red-200 leading-relaxed min-h-[58px] flex flex-col justify-center';
+      }
+
+      // Si está en modo "Solo Pitido" (skipTtsSpeech === true) y el registro fue válido,
+      // no reproducimos voz hablada y liberamos inmediatamente los botones y el micrófono.
+      if (data.skipTtsSpeech) {
+        resumeListeningIfLiveCall();
+      } else if (data.tts && data.tts.audioBase64) {
+        playKokoroBase64Audio(data.tts.audioBase64, data.audioFeedback);
+      } else if (data.audioFeedback) {
+        requestAndPlayKokoro(data.audioFeedback);
+      } else {
+        resumeListeningIfLiveCall();
+      }
+
+      loadStats();
+    }
+
+    function quickVoice(str, btnEl = null) {
+      if (isActionBusy || orbState === 'speaking' || orbState === 'thinking') return;
+      document.getElementById('simTextInput').value = str;
+      submitTextCommand(str, btnEl);
+    }
+
+    function sendSimulatedVoice() {
+      if (isActionBusy || orbState === 'speaking' || orbState === 'thinking') return;
+      const val = document.getElementById('simTextInput').value;
+      if (val) submitTextCommand(val, document.getElementById('simSubmitBtn'));
+    }
+
+    function speakExecutiveSummary(btnEl = null) {
+      if (isActionBusy || orbState === 'speaking' || orbState === 'thinking') return;
+      submitTextCommand('Cuál es el resumen de producción de la mesa 6', btnEl);
+    }
+
+    // =========================================================================
+    // AUTENTICACIÓN, VISTAS Y TELEMETRÍA EN VIVO
+    // =========================================================================
+    window.addEventListener('DOMContentLoaded', () => {
+      connectRealtimeWebSocket();
+      const saved = localStorage.getItem('pescaai_user');
+      if (saved) {
+        try {
+          currentUser = JSON.parse(saved);
+          applyUserSession(currentUser);
+        } catch (_) {}
+      }
+    });
+
+    function fillLogin(u, p) {
+      document.getElementById('loginUsername').value = u;
+      document.getElementById('loginPassword').value = p;
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const u = document.getElementById('loginUsername').value;
+      const p = document.getElementById('loginPassword').value;
+      const errBox = document.getElementById('loginError');
+      errBox.classList.add('hidden');
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: u, password: p })
+        });
+        const data = await res.json();
+        if (data.success) {
+          currentUser = data.user;
+          localStorage.setItem('pescaai_user', JSON.stringify(currentUser));
+          applyUserSession(currentUser);
+        } else {
+          errBox.innerText = data.error || 'Error de credenciales';
+          errBox.classList.remove('hidden');
+        }
+      } catch (err) {
+        errBox.innerText = 'Error conectando al servidor: ' + err.message;
+        errBox.classList.remove('hidden');
+      }
+    });
+
+    function toggleProfileDropdown(event) {
+      if (event) event.stopPropagation();
+      const dd = document.getElementById('profileDropdown');
+      if (dd) dd.classList.toggle('hidden');
+    }
+
+    function closeProfileDropdown() {
+      const dd = document.getElementById('profileDropdown');
+      if (dd) dd.classList.add('hidden');
+    }
+
+    window.addEventListener('click', () => {
+      closeProfileDropdown();
+    });
+
+    function applyUserSession(user) {
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('appContainer').classList.remove('hidden');
+      document.getElementById('userLabel').innerText = user.nombre;
+
+      const shortNameEl = document.getElementById('profileMenuShortName');
+      const ddNameEl = document.getElementById('dropdownUserName');
+      const ddRoleEl = document.getElementById('dropdownUserRole');
+      if (shortNameEl) shortNameEl.innerText = user.nombre.split(' ')[0] || user.username;
+      if (ddNameEl) ddNameEl.innerText = user.nombre;
+      if (ddRoleEl) ddRoleEl.innerText = `Perfil: ${user.rol.toUpperCase()}`;
+
+      const badge = document.getElementById('roleBadge');
+      badge.innerText = user.rol.toUpperCase();
+
+      if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
+        wsConnection.send(JSON.stringify({
+          type: 'CONFIG',
+          role: user.rol,
+          voice: 'ef_dora',
+          confirmationMode
+        }));
+      }
+
+      if (user.rol === 'supervisor') {
+        badge.className = 'text-[10px] px-2 py-0.5 rounded font-bold uppercase mono bg-cyan-950 text-cyan-300 border border-cyan-800';
+        switchView('voice');
+      } else if (user.rol === 'directivo') {
+        badge.className = 'text-[10px] px-2 py-0.5 rounded font-bold uppercase mono bg-purple-950 text-purple-300 border border-purple-800';
+        switchView('executive');
+      } else {
+        badge.className = 'text-[10px] px-2 py-0.5 rounded font-bold uppercase mono bg-emerald-950 text-emerald-300 border border-emerald-800';
+        switchView('admin');
+      }
+
+      loadStats();
+      checkWhatsAppStatus();
+    }
+
+    function logout() {
+      closeProfileDropdown();
+      if (liveCallActive) {
+        toggleLiveCallMode();
+      }
+      localStorage.removeItem('pescaai_user');
+      currentUser = null;
+      document.getElementById('appContainer').classList.add('hidden');
+      document.getElementById('loginScreen').classList.remove('hidden');
+    }
+
+    function switchView(viewName) {
+      document.querySelectorAll('.view-card').forEach((v) => v.classList.remove('active'));
+      const navBtns = {
+        voice: document.getElementById('navVoiceBtn'),
+        executive: document.getElementById('navExecutiveBtn'),
+        admin: document.getElementById('navAdminBtn')
+      };
+
+      Object.values(navBtns).forEach((b) => {
+        b.className = 'px-3 py-1.5 rounded-lg font-bold transition text-slate-400 hover:text-white flex items-center space-x-1';
+      });
+
+      if (viewName === 'voice') {
+        document.getElementById('viewVoice').classList.add('active');
+        navBtns.voice.className = 'px-3 py-1.5 rounded-lg font-bold transition bg-cyan-600 text-white shadow flex items-center space-x-1';
+      } else if (viewName === 'executive') {
+        document.getElementById('viewExecutive').classList.add('active');
+        navBtns.executive.className = 'px-3 py-1.5 rounded-lg font-bold transition bg-indigo-600 text-white shadow flex items-center space-x-1';
+      } else if (viewName === 'admin') {
+        document.getElementById('viewAdmin').classList.add('active');
+        navBtns.admin.className = 'px-3 py-1.5 rounded-lg font-bold transition bg-emerald-600 text-white shadow flex items-center space-x-1';
+        // No inicia generación de QR automáticamente al abrir la vista; solo consulta el estado actual
+        checkWhatsAppStatus();
+      }
+    }
+
+    async function sendExecWaQuery() {
+      const q = document.getElementById('execWaQueryInput').value;
+      if (!q) return;
+      const box = document.getElementById('execWaReplyBox');
+      box.classList.remove('hidden');
+      box.innerText = 'Consultando datos de planta...';
+
+      const res = await fetch('/api/whatsapp/webhook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sender: '593999999999', message: q })
+      });
+      const data = await res.json();
+      box.innerText = data.reply;
+    }
+
+    function downloadReport() {
+      window.open('/api/stats', '_blank');
+    }
+
+    async function checkWhatsAppStatus() {
+      try {
+        const res = await fetch('/api/whatsapp/status');
+        const data = await res.json();
+
+        const label = document.getElementById('adminWaStatusLabel');
+        const phone = document.getElementById('adminWaPhone');
+        const idleBox = document.getElementById('adminQrIdleBox');
+        const loading = document.getElementById('adminQrLoading');
+        const qrImg = document.getElementById('adminQrImage');
+        const connBox = document.getElementById('adminConnectedBox');
+        const connPhone = document.getElementById('adminConnectedPhone');
+        const disBtn = document.getElementById('adminDisconnectBtn');
+        const cancelQrBtn = document.getElementById('adminCancelQrBtn');
+        const startQrBtn = document.getElementById('adminStartQrBtn');
+
+        if (data.status === 'connected') {
+          label.innerText = 'CONECTADO ACTIVO';
+          label.className = 'text-xs font-bold mono text-emerald-400';
+          phone.innerText = `+${data.phone}`;
+
+          if (idleBox) idleBox.classList.add('hidden');
+          loading.classList.add('hidden');
+          qrImg.classList.add('hidden');
+          connBox.classList.remove('hidden');
+          disBtn.classList.remove('hidden');
+          if (cancelQrBtn) cancelQrBtn.classList.add('hidden');
+          if (startQrBtn) startQrBtn.innerText = '🔄 Cambiar Dispositivo (QR)';
+          connPhone.innerText = `Número: +${data.phone}`;
+        } else if (data.status === 'qr_ready' && data.qrDataUrl) {
+          label.innerText = 'ESCANEAR QR CON WHATSAPP';
+          label.className = 'text-xs font-bold mono text-amber-400 animate-pulse';
+          phone.innerText = '';
+
+          if (idleBox) idleBox.classList.add('hidden');
+          loading.classList.add('hidden');
+          connBox.classList.add('hidden');
+          disBtn.classList.add('hidden');
+          if (cancelQrBtn) cancelQrBtn.classList.remove('hidden');
+          if (startQrBtn) startQrBtn.innerText = '🔄 Regenerar QR';
+          qrImg.src = data.qrDataUrl;
+          qrImg.classList.remove('hidden');
+        } else if (data.status === 'connecting') {
+          label.innerText = 'GENERANDO CÓDIGO QR...';
+          label.className = 'text-xs font-bold mono text-cyan-400 animate-pulse';
+          phone.innerText = '';
+
+          if (idleBox) idleBox.classList.add('hidden');
+          loading.innerText = 'Generando código QR bajo demanda...';
+          loading.classList.remove('hidden');
+          qrImg.classList.add('hidden');
+          connBox.classList.add('hidden');
+          disBtn.classList.add('hidden');
+          if (cancelQrBtn) cancelQrBtn.classList.remove('hidden');
+        } else {
+          // Modo reposo bajo demanda (sin gasto de recursos en segundo plano)
+          label.innerText = 'EN REPOSO (BAJO DEMANDA)';
+          label.className = 'text-xs font-bold mono text-slate-400';
+          phone.innerText = '';
+
+          if (idleBox) idleBox.classList.remove('hidden');
+          loading.classList.add('hidden');
+          qrImg.classList.add('hidden');
+          connBox.classList.add('hidden');
+          disBtn.classList.add('hidden');
+          if (cancelQrBtn) cancelQrBtn.classList.add('hidden');
+          if (startQrBtn) startQrBtn.innerText = '▶️ Iniciar QR';
+        }
+      } catch (_) {}
+    }
+
+    async function requestNewQr(forceReset = true) {
+      const idleBox = document.getElementById('adminQrIdleBox');
+      const loading = document.getElementById('adminQrLoading');
+      const cancelQrBtn = document.getElementById('adminCancelQrBtn');
+      if (idleBox) idleBox.classList.add('hidden');
+      loading.innerText = 'Generando código QR bajo demanda...';
+      loading.classList.remove('hidden');
+      document.getElementById('adminQrImage').classList.add('hidden');
+      document.getElementById('adminConnectedBox').classList.add('hidden');
+      if (cancelQrBtn) cancelQrBtn.classList.remove('hidden');
+
+      await fetch('/api/whatsapp/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ force: forceReset })
+      });
+      setTimeout(() => checkWhatsAppStatus(), 1200);
+    }
+
+    async function cancelQrGeneration() {
+      await fetch('/api/whatsapp/cancel-qr', { method: 'POST' });
+      checkWhatsAppStatus();
+    }
+
+    async function disconnectWhatsApp() {
+      if (confirm('¿Desea cerrar la sesión de WhatsApp?')) {
+        await fetch('/api/whatsapp/disconnect', { method: 'POST' });
+        checkWhatsAppStatus();
+      }
+    }
+
+    async function sendPushTest() {
+      const ph = document.getElementById('pushPhone').value;
+      const msg = document.getElementById('pushMessage').value;
+      if (!ph || !msg) return alert('Ingrese teléfono y mensaje');
+
+      const res = await fetch('/api/whatsapp/send-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: ph, message: msg })
+      });
+      const data = await res.json();
+      alert(data.success ? 'Mensaje enviado exitosamente' : 'WhatsApp desconectado');
+    }
+
+    const TRACE_LABELS = {
+      RECORD_WEIGHING_NOMINAL: 'Pesaje Registrado',
+      RECORD_WEIGHING_REJECTED: 'Pesaje Rechazado',
+      CORRECT_LAST_WEIGHING: 'Corrección de Pesaje',
+      RECORD_HACCP_METRIC: 'Control Térmico',
+      REPORT_LINE_DOWNTIME: 'Parada de Línea',
+      CONVERSATIONAL_SUPERVISOR: 'Asistencia en Línea',
+      RESUMEN_GENERAL: 'Consulta de Balance'
+    };
+
+    async function loadStats() {
+      try {
+        const res = await fetch('/api/stats');
+        const data = await res.json();
+
+        const s = data.summary || {};
+        const lomo = Number(s.total_lomo_kg || 0).toFixed(1);
+        const sangacho = Number(s.total_sangacho_kg || 0).toFixed(1);
+        const totalKg = (Number(s.total_lomo_kg || 0) + Number(s.total_sangacho_kg || 0)).toFixed(1);
+        const rend = Number(s.rendimiento_promedio || 0).toFixed(1);
+
+        document.getElementById('voiceKpiBandejas').innerText = s.total_pesajes || 0;
+        document.getElementById('voiceKpiLomo').innerText = `${lomo} kg`;
+        document.getElementById('voiceKpiSangacho').innerText = `${sangacho} kg`;
+        document.getElementById('voiceKpiRend').innerText = `${rend}%`;
+
+        document.getElementById('execTotalKg').innerText = `${totalKg} kg`;
+        document.getElementById('execLomoKg').innerText = `${lomo} kg`;
+        document.getElementById('execSangachoKg').innerText = `${sangacho} kg`;
+        document.getElementById('execRendimiento').innerText = `${rend}%`;
+
+        // Tabla de Pesajes (Con Acciones de Trazabilidad y Edición)
+        const tbody = document.getElementById('voicePesajesTable');
+        if (data.pesajes && data.pesajes.length > 0) {
+          tbody.innerHTML = data.pesajes.map((p) => `
+            <tr class="hover:bg-slate-900/60 transition group">
+              <td class="py-2 text-slate-500">${(p.timestamp_db || '').split(' ')[1] || p.timestamp_db}</td>
+              <td class="py-2 text-slate-200 font-medium">${p.operaria_nombre || '#' + p.operaria_id}</td>
+              <td class="py-2"><span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${p.tipo_producto === 'lomo' ? 'bg-cyan-950 text-cyan-300 border border-cyan-800/60' : 'bg-amber-950 text-amber-300 border border-amber-800/60'}">${p.tipo_producto.toUpperCase()}</span></td>
+              <td class="py-2 font-bold text-white">${p.peso_kg} kg</td>
+              <td class="py-2">
+                <div class="flex items-center space-x-1.5">
+                  <button onclick="openTimelineModal(${p.id}, '${p.uuid || ''}')" title="Ver Línea de Tiempo y Versiones" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 text-[10px] mono border border-slate-700 transition">
+                    📜 V1+
+                  </button>
+                  <button onclick="openEditModal(${p.id}, ${p.peso_kg}, '${p.tipo_producto}', '${p.operaria_id}')" title="Rectificar Pesaje" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-cyan-950 text-slate-300 hover:text-cyan-300 text-[10px] border border-slate-700 transition">
+                    ✏️
+                  </button>
+                  <button onclick="deletePesajePrompt(${p.id})" title="Anular Pesaje con Trazabilidad" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-red-950 text-slate-400 hover:text-red-300 text-[10px] border border-slate-700 transition">
+                    🗑️
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `).join('');
+
+          // Actualizar Pestaña de Gestión en Copilot Sidebar
+          const cManage = document.getElementById('copilotManageList');
+          if (cManage) {
+            cManage.innerHTML = data.pesajes.slice(0, 8).map((p) => `
+              <div class="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center justify-between">
+                <div>
+                  <div class="flex items-center space-x-1.5">
+                    <span class="font-bold text-white">#${p.id}</span>
+                    <span class="text-[10px] px-1 rounded bg-slate-800 text-slate-300">${p.tipo_producto}</span>
+                    <span class="text-cyan-400 font-bold">${p.peso_kg} kg</span>
+                  </div>
+                  <p class="text-[10px] text-slate-500 mt-0.5">${p.operaria_nombre || 'Op ' + p.operaria_id} • ${(p.timestamp_db || '').split(' ')[1] || ''}</p>
+                </div>
+                <div class="flex items-center space-x-1">
+                  <button onclick="openTimelineModal(${p.id})" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 text-[10px] mono">Timeline</button>
+                  <button onclick="openEditModal(${p.id}, ${p.peso_kg}, '${p.tipo_producto}', '${p.operaria_id}')" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px]">Ajustar</button>
+                </div>
+              </div>
+            `).join('');
+          }
+        }
+
+        // Actualizar Gráficos de Analítica en Copiloto Sidebar
+        const totalNum = (Number(s.total_lomo_kg || 0) + Number(s.total_sangacho_kg || 0));
+        const lomoPct = totalNum > 0 ? ((Number(s.total_lomo_kg || 0) / totalNum) * 100).toFixed(1) : 0;
+        const sangachoPct = totalNum > 0 ? ((Number(s.total_sangacho_kg || 0) / totalNum) * 100).toFixed(1) : 0;
+        
+        const cTotalEl = document.getElementById('copilotAnalyticsTotal');
+        if (cTotalEl) cTotalEl.innerText = `${totalNum.toFixed(1)} kg`;
+        const cBarLomo = document.getElementById('copilotBarLomo');
+        const cBarLomoVal = document.getElementById('copilotBarLomoVal');
+        if (cBarLomo && cBarLomoVal) {
+          cBarLomo.style.width = `${lomoPct}%`;
+          cBarLomoVal.innerText = `${lomo} kg (${lomoPct}%)`;
+        }
+        const cBarSangacho = document.getElementById('copilotBarSangacho');
+        const cBarSangachoVal = document.getElementById('copilotBarSangachoVal');
+        if (cBarSangacho && cBarSangachoVal) {
+          cBarSangacho.style.width = `${sangachoPct}%`;
+          cBarSangachoVal.innerText = `${sangacho} kg (${sangachoPct}%)`;
+        }
+
+        // Top Operarias en Copilot
+        const cTop = document.getElementById('copilotTopOperarias');
+        if (cTop && data.operariasStats && data.operariasStats.length > 0) {
+          cTop.innerHTML = data.operariasStats.slice(0, 5).map((o, idx) => `
+            <div class="flex justify-between items-center py-1 border-b border-slate-800/40">
+              <span class="truncate max-w-[150px]">${idx + 1}. ${o.nombre}</span>
+              <span class="text-cyan-400 font-bold">${Number(o.total_kg).toFixed(1)} kg (${o.bandejas} b)</span>
+            </div>
+          `).join('');
+        }
+
+        // Lista de Paradas Directiva
+        const pList = document.getElementById('execParadasList');
+        const pCount = document.getElementById('execParadasCount');
+        if (data.paradas && data.paradas.length > 0) {
+          pCount.innerText = `${data.paradas.length} Registradas`;
+          pList.innerHTML = data.paradas.map((p) => `
+            <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex justify-between items-center">
+              <div>
+                <span class="font-bold text-red-400">Mesa ${p.mesa}:</span> <span class="text-slate-300">${p.motivo}</span>
+              </div>
+              <span class="text-[10px] mono text-slate-400">~${p.tiempo_estimado_min} min</span>
+            </div>
+          `).join('');
+        }
+
+        // Lista Calidad Directiva
+        const hList = document.getElementById('execHaccpList');
+        if (data.haccp && data.haccp.length > 0) {
+          hList.innerHTML = data.haccp.map((h) => `
+            <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex justify-between items-center">
+              <div>
+                <span class="font-bold ${h.cumple_norma ? 'text-emerald-400' : 'text-red-400'}">${h.parametro}:</span>
+                <span class="text-white font-bold ml-1">${h.valor_medido} ${h.unidad}</span>
+                <span class="text-[10px] text-slate-500 ml-1">(${h.lote_cuba})</span>
+              </div>
+              <span class="text-[10px] mono ${h.cumple_norma ? 'text-emerald-400' : 'text-red-400'}">${h.cumple_norma ? 'EN NORMA' : 'ALERTA'}</span>
+            </div>
+          `).join('');
+        }
+
+        // Bitácora de Acciones
+        const aBox = document.getElementById('agentTracesLog');
+        if (data.agentTraces && data.agentTraces.length > 0) {
+          aBox.innerHTML = data.agentTraces.slice(0, 6).map((t) => `
+            <div class="border-b border-slate-800/50 pb-1">
+              <span class="text-cyan-400 font-bold">[${AGENT_LABELS[t.agent_name] || 'Planta'}]</span>
+              <span class="text-slate-300">${TRACE_LABELS[t.intent] || t.intent}</span>
+              <span class="text-slate-500">(${t.latency_ms} ms)</span>
+            </div>
+          `).join('');
+        }
+
+        // Bitácora de Límites
+        const lBox = document.getElementById('voiceLemLog');
+        if (data.lemTelemetria && data.lemTelemetria.length > 0) {
+          lBox.innerHTML = data.lemTelemetria.slice(0, 6).map((l) => `
+            <div class="border-b border-slate-800/50 pb-1">
+              <span class="${l.verdict === 'ACCEPTED' ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}">[${l.verdict === 'ACCEPTED' ? 'APROBADO' : 'BLOQUEADO'}]</span>
+              <span class="text-slate-300">${String(l.reason || '').replace(/_/g, ' ')}</span>
+            </div>
+          `).join('');
+        }
+      } catch (_) {}
+    }
+
+    // =========================================================================
+    // CONTROL DEL SIDEBAR DEL COPILOTO IA & ACCIONES EN TIEMPO REAL
+    // =========================================================================
+    let copilotSidebarOpen = false;
+
+    function toggleCopilotSidebar() {
+      copilotSidebarOpen = !copilotSidebarOpen;
+      const sb = document.getElementById('copilotSidebar');
+      const bd = document.getElementById('copilotBackdrop');
+      if (copilotSidebarOpen) {
+        sb.classList.remove('translate-x-full');
+        bd.classList.remove('hidden');
+        loadStats();
+      } else {
+        sb.classList.add('translate-x-full');
+        bd.classList.add('hidden');
+      }
+    }
+
+    function switchCopilotTab(tab) {
+      const btnChat = document.getElementById('copilotTabChatBtn');
+      const btnAna = document.getElementById('copilotTabAnalyticsBtn');
+      const btnMan = document.getElementById('copilotTabManageBtn');
+
+      const cChat = document.getElementById('copilotContentChat');
+      const cAna = document.getElementById('copilotContentAnalytics');
+      const cMan = document.getElementById('copilotContentManage');
+
+      const activeClass = 'flex-1 py-2 text-center rounded-t-xl bg-slate-900 text-cyan-400 border-t border-x border-slate-800';
+      const inactiveClass = 'flex-1 py-2 text-center text-slate-400 hover:text-slate-200';
+
+      btnChat.className = tab === 'chat' ? activeClass : inactiveClass;
+      btnAna.className = tab === 'analytics' ? activeClass : inactiveClass;
+      btnMan.className = tab === 'manage' ? activeClass : inactiveClass;
+
+      cChat.classList.toggle('hidden', tab !== 'chat');
+      cAna.classList.toggle('hidden', tab !== 'analytics');
+      cMan.classList.toggle('hidden', tab !== 'manage');
+    }
+
+    function clearCopilotChat() {
+      const box = document.getElementById('copilotChatMessages');
+      box.innerHTML = `
+        <div class="p-3 rounded-2xl bg-cyan-950/30 border border-cyan-900/40 text-cyan-200">
+          👋 <strong>Conversación reiniciada.</strong> En qué puedo ayudarte ahora?
+        </div>
+      `;
+    }
+
+    function appendCopilotMessage(sender, text, isAi = false) {
+      const box = document.getElementById('copilotChatMessages');
+      const msgDiv = document.createElement('div');
+      msgDiv.className = isAi
+        ? 'p-3 rounded-2xl bg-slate-900 border border-slate-800 text-cyan-200 leading-relaxed'
+        : 'p-3 rounded-2xl bg-cyan-600/20 border border-cyan-500/40 text-white ml-6 text-right leading-relaxed';
+      msgDiv.innerHTML = isAi
+        ? `<div class="flex items-center space-x-1.5 mb-1 text-[10px] mono text-cyan-400 font-bold"><span>🤖 Copiloto Pesca AI</span></div>${text}`
+        : `<div class="flex items-center justify-end space-x-1.5 mb-1 text-[10px] mono text-slate-400"><span>👤 Tú</span></div>${text}`;
+      box.appendChild(msgDiv);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function sendCopilotSuggestion(txt) {
+      document.getElementById('copilotChatInput').value = txt;
+      sendCopilotText();
+    }
+
+    async function sendCopilotText() {
+      const input = document.getElementById('copilotChatInput');
+      const text = (input.value || '').trim();
+      if (!text) return;
+
+      input.value = '';
+      appendCopilotMessage('user', text, false);
+
+      // Usar el pipeline del orquestador por texto/voz
+      try {
+        const res = await fetch('/api/pesaje/text', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text,
+            include_tts: true,
+            confirmation_mode: confirmationMode
+          })
+        });
+        const data = await res.json();
+        const reply = data.audioFeedback || 'Acción procesada correctamente.';
+        appendCopilotMessage('assistant', reply, true);
+        handleVoiceResponse(data, data.latencyMs || 250);
+      } catch (err) {
+        appendCopilotMessage('assistant', '⚠️ Error al procesar tu solicitud: ' + err.message, true);
+      }
+    }
+
+    // =========================================================================
+    // LÍNEA DE TIEMPO DE TRAZABILIDAD (VERSIONAMIENTO DE PESAJES)
+    // =========================================================================
+    async function openTimelineModal(pesajeId, uuid = '') {
+      const modal = document.getElementById('timelineModal');
+      const sub = document.getElementById('timelineModalSub');
+      const body = document.getElementById('timelineModalBody');
+
+      sub.innerText = `Pesaje #${pesajeId} ${uuid ? '• ' + uuid.slice(0, 8) + '...' : ''}`;
+      body.innerHTML = '<div class="text-center text-slate-500 py-4">Consultando trazabilidad inmutable...</div>';
+      modal.classList.remove('hidden');
+
+      try {
+        const res = await fetch(`/api/pesajes/${pesajeId}/timeline`);
+        const data = await res.json();
+        if (!data.success || !data.timeline || data.timeline.length === 0) {
+          body.innerHTML = `
+            <div class="p-3 rounded-xl bg-slate-900 border border-slate-800 text-slate-300">
+              <p class="font-bold text-white mb-1">Versión 1 (V1) - Original Nominal</p>
+              <p class="text-slate-400">Pesaje registrado por voz. Sin modificaciones posteriores.</p>
+              ${data.actual ? `<p class="mt-2 text-cyan-300 font-bold">${data.actual.tipo_producto.toUpperCase()}: ${data.actual.peso_kg} kg (Operaria ${data.actual.operaria_id})</p>` : ''}
+            </div>
+          `;
+          return;
+        }
+
+        body.innerHTML = data.timeline.map((v) => `
+          <div class="relative pl-6 pb-4 border-l-2 ${v.accion === 'ANULACION' ? 'border-red-500' : v.accion === 'CORRECCION_VOZ' || v.accion === 'CORRECCION_MANUAL' ? 'border-amber-400' : 'border-cyan-500'} last:border-l-0">
+            <div class="absolute -left-2 top-0 w-3.5 h-3.5 rounded-full ${v.accion === 'ANULACION' ? 'bg-red-500' : v.accion.includes('CORRECCION') ? 'bg-amber-400' : 'bg-cyan-500'} ring-4 ring-slate-950"></div>
+            <div class="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl">
+              <div class="flex justify-between items-center mb-1">
+                <span class="font-bold text-white uppercase text-[11px]">Versión ${v.version_numero} • ${v.accion.replace(/_/g, ' ')}</span>
+                <span class="text-[10px] text-slate-500">${(v.created_at || '').split(' ')[1] || v.created_at}</span>
+              </div>
+              <p class="text-slate-300 text-[11px] mb-1">
+                <strong>${v.tipo_producto.toUpperCase()}</strong>: <span class="text-cyan-400 font-bold">${v.peso_kg} kg</span> | Mesa ${v.mesa} | Op ${v.operaria_id}
+              </p>
+              <p class="text-[10px] text-slate-400 italic">"${v.motivo_cambio || 'Sin observaciones'}"</p>
+              <div class="mt-2 pt-1 border-t border-slate-800/60 flex justify-between text-[9px] text-slate-500">
+                <span>Autor: ${v.modificado_por}</span>
+                <span class="text-emerald-400">✓ Hash Verificado</span>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      } catch (err) {
+        body.innerHTML = `<div class="p-3 text-red-400">Error cargando auditoría: ${err.message}</div>`;
+      }
+    }
+
+    function closeTimelineModal() {
+      document.getElementById('timelineModal').classList.add('hidden');
+    }
+
+    // =========================================================================
+    // MODAL DE RECTIFICACIÓN Y ANULACIÓN
+    // =========================================================================
+    function openEditModal(pesajeId, pesoKg, tipoProducto, operariaId) {
+      document.getElementById('editModalPesajeId').value = pesajeId;
+      document.getElementById('editModalPeso').value = pesoKg;
+      document.getElementById('editModalTipo').value = tipoProducto;
+      document.getElementById('editModalMotivo').value = '';
+      document.getElementById('editPesajeModal').classList.remove('hidden');
+    }
+
+    function closeEditModal() {
+      document.getElementById('editPesajeModal').classList.add('hidden');
+    }
+
+    async function submitEditPesaje() {
+      const id = document.getElementById('editModalPesajeId').value;
+      const peso_kg = document.getElementById('editModalPeso').value;
+      const tipo_producto = document.getElementById('editModalTipo').value;
+      const motivo = document.getElementById('editModalMotivo').value;
+
+      if (!peso_kg || parseFloat(peso_kg) <= 0) return alert('Ingrese un peso válido mayor a 0');
+
+      try {
+        const res = await fetch(`/api/pesajes/${id}/correct`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            peso_kg: parseFloat(peso_kg),
+            tipo_producto,
+            motivo: motivo || 'Ajuste manual desde panel de supervisión',
+            modificado_por: currentUser ? currentUser.nombre : 'SUPERVISOR'
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          closeEditModal();
+          loadStats();
+          if (copilotSidebarOpen) {
+            appendCopilotMessage('assistant', `Ajusté el pesaje #${id} a ${peso_kg} kg de ${tipo_producto}. Quedó registrada la Versión ${data.version} en la línea de tiempo.`, true);
+          }
+        } else {
+          alert('Error: ' + data.error);
+        }
+      } catch (e) {
+        alert('Error de conexión: ' + e.message);
+      }
+    }
+
+    async function deletePesajePrompt(pesajeId) {
+      const motivo = prompt(`¿Desea anular el pesaje #${pesajeId}? Ingrese el motivo para la auditoría HACCP:`, 'Error de dictado en mesa');
+      if (!motivo) return;
+
+      try {
+        const res = await fetch(`/api/pesajes/${pesajeId}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            motivo,
+            modificado_por: currentUser ? currentUser.nombre : 'SUPERVISOR'
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          loadStats();
+          if (copilotSidebarOpen) {
+            appendCopilotMessage('assistant', `El pesaje #${pesajeId} fue anulado y guardado en la bitácora de trazabilidad.`, true);
+          }
+        } else {
+          alert('Error: ' + data.error);
+        }
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    // =========================================================================
+    // MODAL DE TERMINAL MÓVIL / KIOSCO Y CONSOLA DE DEPURACIÓN EN VIVO
+    // =========================================================================
+    let mobileModalOpen = false;
+    let logsDrawerOpen = false;
+    let debugLogCount = 0;
+
+    function toggleMobileModal() {
+      mobileModalOpen = !mobileModalOpen;
+      const modal = document.getElementById('mobileSimulatorModal');
+      if (mobileModalOpen) {
+        modal.classList.remove('hidden');
+        syncMobileRecentList();
+      } else {
+        modal.classList.add('hidden');
+      }
+    }
+
+    function toggleLogsDrawer() {
+      logsDrawerOpen = !logsDrawerOpen;
+      const drawer = document.getElementById('logsDrawer');
+      if (logsDrawerOpen) {
+        drawer.classList.remove('translate-y-full');
+      } else {
+        drawer.classList.add('translate-y-full');
+      }
+    }
+
+    function logDebugMessage(type, message, details = null) {
+      debugLogCount++;
+      const badge = document.getElementById('logCounterBadge');
+      if (badge) badge.innerText = `${debugLogCount} logs`;
+
+      const container = document.getElementById('debugLogsContainer');
+      if (!container) return;
+
+      const time = new Date().toLocaleTimeString();
+      const div = document.createElement('div');
+      div.className = 'border-b border-slate-900 pb-1 flex items-start space-x-2';
+
+      let color = 'text-slate-300';
+      let tag = '[INFO]';
+      if (type === 'error') {
+        color = 'text-red-400 font-bold';
+        tag = '[ERROR]';
+      } else if (type === 'warn') {
+        color = 'text-amber-400';
+        tag = '[WARN]';
+      } else if (type === 'ws') {
+        color = 'text-cyan-400';
+        tag = '[WS]';
+      } else if (type === 'voice') {
+        color = 'text-emerald-400';
+        tag = '[VOZ]';
+      }
+
+      div.innerHTML = `
+        <span class="text-slate-500">${time}</span>
+        <span class="${color}">${tag}</span>
+        <span class="text-slate-200 flex-1 break-all">${message}</span>
+      `;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function clearDebugLogs() {
+      debugLogCount = 0;
+      const badge = document.getElementById('logCounterBadge');
+      if (badge) badge.innerText = '0 logs';
+      const container = document.getElementById('debugLogsContainer');
+      if (container) container.innerHTML = '<div class="text-slate-500 italic">[Logs limpiados]</div>';
+    }
+
+    // Interceptar console.error y errores globales de JS
+    const origConsoleError = console.error;
+    console.error = function (...args) {
+      logDebugMessage('error', args.map((a) => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' '));
+      origConsoleError.apply(console, args);
+    };
+
+    window.addEventListener('error', (e) => {
+      logDebugMessage('error', `${e.message} at ${e.filename}:${e.lineno}`);
+    });
+
+    function syncMobileRecentList() {
+      const mobList = document.getElementById('mobRecentList');
+      if (!mobList) return;
+      fetch('/api/stats')
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.pesajes && data.pesajes.length > 0) {
+            mobList.innerHTML = data.pesajes.slice(0, 5).map((p) => `
+              <div class="flex justify-between items-center py-1 border-b border-slate-800/40">
+                <span class="text-slate-200">${p.tipo_producto.toUpperCase()} ${p.peso_kg}kg</span>
+                <span class="text-emerald-400 text-[10px]">✓ Op ${p.operaria_id}</span>
+              </div>
+            `).join('');
+          } else {
+            mobList.innerHTML = '<p class="text-slate-500 text-center py-2">Sin pesajes registrados</p>';
+          }
+        })
+        .catch(() => {});
+    }
+
+    setInterval(loadStats, 3000);
+    setInterval(checkWhatsAppStatus, 5000);
+  </script>
+</body>
+</html>
