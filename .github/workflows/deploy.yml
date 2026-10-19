@@ -1,0 +1,69 @@
+name: Deploy Pesca AI OS (Production VPS)
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy to Production VPS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: 📦 Create deployment archive
+        run: |
+          echo "📦 Creando paquete de despliegue comprimido para Pesca AI..."
+          tar -czf /tmp/deploy.tar.gz \
+            --exclude='node_modules' \
+            --exclude='dist' \
+            --exclude='.git' \
+            --exclude='*.log' \
+            --exclude='*.db' \
+            --exclude='*.db-wal' \
+            --exclude='*.db-shm' \
+            --exclude='.DS_Store' \
+            --exclude='tts_cache' \
+            --exclude='qr_codes' \
+            --exclude='tokens' \
+            --exclude='deploy.tar.gz' \
+            .
+          mv /tmp/deploy.tar.gz ./deploy.tar.gz
+          echo "Tamaño del archivo comprimido: $(du -h deploy.tar.gz | cut -f1)"
+
+      - name: 🚀 Copy archive to Production VPS
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.CONTABO_HOST || secrets.SERVER_HOST || secrets.SSH_HOST }}
+          username: ${{ secrets.CONTABO_USER || secrets.SERVER_USER || secrets.SSH_USER || 'root' }}
+          password: ${{ secrets.CONTABO_PASSWORD || secrets.SERVER_PASSWORD || secrets.SSH_PASSWORD }}
+          key: ${{ secrets.SSH_PRIVATE_KEY || secrets.SERVER_KEY || '' }}
+          port: ${{ secrets.SERVER_PORT || secrets.CONTABO_PORT || secrets.SSH_PORT || 22 }}
+          source: "deploy.tar.gz"
+          target: "/tmp"
+
+      - name: ⚙️ Extract and deploy on VPS
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.CONTABO_HOST || secrets.SERVER_HOST || secrets.SSH_HOST }}
+          username: ${{ secrets.CONTABO_USER || secrets.SERVER_USER || secrets.SSH_USER || 'root' }}
+          password: ${{ secrets.CONTABO_PASSWORD || secrets.SERVER_PASSWORD || secrets.SSH_PASSWORD }}
+          key: ${{ secrets.SSH_PRIVATE_KEY || secrets.SERVER_KEY || '' }}
+          port: ${{ secrets.SERVER_PORT || secrets.CONTABO_PORT || secrets.SSH_PORT || 22 }}
+          script: |
+            echo '📂 Preparando directorio de despliegue en VPS (~/pescaai)...'
+            mkdir -p ~/pescaai
+            cd ~/pescaai
+            echo '📦 Extrayendo paquete de despliegue...'
+            tar -xzf /tmp/deploy.tar.gz --overwrite
+            rm -f /tmp/deploy.tar.gz
+            echo '⚙️ Ejecutando script de despliegue deploy.sh...'
+            chmod +x deploy.sh
+            ./deploy.sh

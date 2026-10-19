@@ -1,0 +1,22 @@
+{
+  "name": "Pesca AI",
+  "short_name": "PescaAI",
+  "description": "Sistema Operativo Pesquero y Copiloto de Planta de Voz Realtime",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#06b6d4",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230891b2'/><text y='.9em' font-size='70' x='15'>🐟</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230891b2'/><text y='.9em' font-size='70' x='15'>🐟</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
