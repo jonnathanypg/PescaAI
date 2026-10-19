@@ -34,6 +34,11 @@ jobs:
             --exclude='qr_codes' \
             --exclude='tokens' \
             --exclude='deploy.tar.gz' \
+            --exclude='models' \
+            --exclude='local-voice-engine' \
+            --exclude='.venv' \
+            --exclude='*.onnx' \
+            --exclude='*.bin' \
             .
           mv /tmp/deploy.tar.gz ./deploy.tar.gz
           echo "Tamaño del archivo comprimido: $(du -h deploy.tar.gz | cut -f1)"
