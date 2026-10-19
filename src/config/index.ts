@@ -47,6 +47,11 @@ export const config = {
     defaultRate: process.env.TTS_RATE || '+8%',
   },
 
+  voice: {
+    engineUrl: process.env.VOICE_ENGINE_URL || 'http://localhost:5005',
+    localFirst: (process.env.VOICE_LOCAL_FIRST || 'true') === 'true',
+  },
+
   lem: {
     apiUrl: process.env.LEM_API_URL || 'https://lem.weblifetech.com',
     apiKey: process.env.LEM_API_KEY || 'lem_sec_tecopesca',

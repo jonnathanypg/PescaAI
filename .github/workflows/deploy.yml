@@ -39,6 +39,11 @@ jobs:
             --exclude='.venv' \
             --exclude='*.onnx' \
             --exclude='*.bin' \
+            --exclude='pescaai-mobile' \
+            --exclude='ios' \
+            --exclude='android' \
+            --exclude='*.apk' \
+            --exclude='*.ipa' \
             .
           mv /tmp/deploy.tar.gz ./deploy.tar.gz
           echo "Tamaño del archivo comprimido: $(du -h deploy.tar.gz | cut -f1)"

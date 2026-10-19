@@ -2,6 +2,7 @@ import axios from 'axios';
 import FormData from 'form-data';
 import fs from 'fs';
 import { config } from '../config';
+import { LocalVoiceService } from './localVoice.service';
 
 /**
  * Servicio Speech-to-Text (Whisper) en Cascada de Ultra-Baja Latencia (<800ms) para Tecopesca Manta
@@ -95,6 +96,7 @@ export class WhisperService {
       [/\bsan\s*gacho\b|\bsancacho\b|\bsangallo\b|\bsangachos\b|\bsan\s*cacho\b/gi, 'sangacho'],
       [/\boperar[íi]a\b|\boperar\s+ya\b|\bopera\s+ria\b|\boperarias\b/gi, 'operaria'],
       [/\bvan\s+deja\b|\bbandejas\b/gi, 'bandeja'],
+      [/\bel\s+homo\b|\bhomo\b/gi, 'lomo'],
       [/\blomos\b|\blo\s+mo\b/gi, 'lomo'],
       [/\bme\s+sa\b|\bmesas\b/gi, 'mesa'],
       [/\bki\s*los\b|\bquilos\b|\bquilo\b/gi, 'kilos'],
@@ -117,6 +119,12 @@ export class WhisperService {
   static async transcribeAudio(audioBuffer: Buffer, filename: string = 'pesaje_mesa.webm'): Promise<string> {
     if (!audioBuffer || audioBuffer.length < 300) {
       return '';
+    }
+
+    // NIVEL 0: MOTOR DE VOZ LOCAL/VPS (sherpa-onnx whisper-tiny) — sin nube ni MediaSuite
+    const localText = await LocalVoiceService.transcribe(audioBuffer, filename);
+    if (localText) {
+      return this.applyIndustrialPhoneticCorrection(localText);
     }
 
     const ext = filename.split('.').pop()?.toLowerCase() || 'webm';

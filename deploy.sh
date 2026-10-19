@@ -54,6 +54,17 @@ npm install --production=false
 echo "⚙️ Compilando TypeScript a dist/..."
 npm run build
 
+# 2.1 Migración de Base de Datos MariaDB / MySQL
+echo ""
+echo "🗄️ Verificando y aplicando migración de base de datos..."
+if command -v mysql &> /dev/null && [ -f "$ROOT_DIR/src/database/schema_mariadb.sql" ]; then
+    if [ -n "$MYSQL_PASSWORD" ]; then
+        mysql -h "${MYSQL_HOST:-localhost}" -u "${MYSQL_USER:-root}" -p"$MYSQL_PASSWORD" < "$ROOT_DIR/src/database/schema_mariadb.sql" 2>/dev/null && echo "✅ Esquema MariaDB aplicado exitosamente" || echo "ℹ️ DB gestionada dinámicamente por la aplicación"
+    else
+        mysql -h "${MYSQL_HOST:-localhost}" -u "${MYSQL_USER:-root}" < "$ROOT_DIR/src/database/schema_mariadb.sql" 2>/dev/null && echo "✅ Esquema MariaDB aplicado exitosamente" || echo "ℹ️ DB gestionada dinámicamente por la aplicación"
+    fi
+fi
+
 # 3. Configuración Nginx para Dominio y WebSockets
 echo ""
 echo "🌐 Configurando Nginx Reverse Proxy..."

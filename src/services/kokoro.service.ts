@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { config } from '../config';
+import { LocalVoiceService } from './localVoice.service';
 
 export interface TtsResult {
   audioBuffer: Buffer;
@@ -227,7 +228,21 @@ export class KokoroTtsService {
       }
     }
 
-    // 3. Llamar a Kokoro-82M en media.weblifetech.com (/api/tts/speak con voice: "ef_dora")
+    // 2.5 Motor de voz LOCAL/VPS (Piper es_ES) — sin nube ni MediaSuite
+    const localBuf = await LocalVoiceService.synthesize(cleanText);
+    if (localBuf) {
+      this.rememberInMemory(hash, localBuf);
+      try { fs.writeFileSync(diskPath, localBuf); } catch (_) {}
+      return {
+        audioBuffer: localBuf,
+        contentType: 'audio/wav',
+        voice: selectedVoice,
+        cached: false,
+        latencyMs: Date.now() - start,
+      };
+    }
+
+    // 3. Fallback de desarrollo: Kokoro-82M en media.weblifetech.com
     try {
       const response = await axios.post(
         config.tts.speakUrl,
